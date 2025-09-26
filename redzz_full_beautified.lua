@@ -925,55 +925,32 @@ local SetProps, SetChildren, InsertTheme, Create do
 		if type(args) ~= "table" then return end
 		local new = Instance.new(args[1])
 
-    -- Auto UI enhancements: subtle rounding, thin stroke, hover for buttons, and size scaling
-    pcall(function()
-        if new and typeof(new) == "Instance" then
-            if new:IsA("Frame") or new:IsA("TextButton") or new:IsA("TextLabel") or new:IsA("ScrollingFrame") or new:IsA("ImageButton") then
-                local __corner = Instance.new("UICorner")
-                __corner.CornerRadius = UDim.new(0, 6) -- slightly rounded but still square-like
-                __corner.Parent = new
+-- AUTO-INJECT: Add subtle UICorner and hover (no strokes)
+pcall(function()
+    if new and typeof(new) == "Instance" then
+        if new:IsA("Frame") or new:IsA("TextButton") or new:IsA("TextLabel") or new:IsA("ScrollingFrame") or new:IsA("ImageButton") then
+            local __corner = Instance.new("UICorner")
+            __corner.CornerRadius = UDim.new(0, 6) -- slightly rounded
+            __corner.Parent = new
 
-                local __stroke = Instance.new("UIStroke")
-                __stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-                __stroke.Thickness = 1
-                __stroke.Transparency = 0.4
-                __stroke.Color = Color3.fromRGB(200,200,200)
-                __stroke.Parent = new
-
-
-                -- Reduce default size a little if this object uses explicit pixel sizes (best-effort)
-                if new.Size and new.Size.X.Scale == 0 and new.Size.Y.Scale == 0 then
-                    local tryX = new.Size.X.Offset
-                    local tryY = new.Size.Y.Offset
-                    if type(tryX) == 'number' and type(tryY) == 'number' and tryX > 24 and tryY > 12 then
-                        new.Size = UDim2.new(0, math.max(12, math.floor(tryX * 0.92)), 0, math.max(8, math.floor(tryY * 0.92)))
-                    end
-                end
-
-                -- Hover animation for TextButton / ImageButton
-                if new:IsA("TextButton") or new:IsA("ImageButton") then
-                    local originalBG = nil
-                    pcall(function() originalBG = new.BackgroundColor3 end)
-                    local hoverTween = nil
-                    local leaveTween = nil
-                    new.MouseEnter:Connect(function()
-                        pcall(function()
-                            if hoverTween then pcall(function() hoverTween:Cancel() end) end
-                            hoverTween = TweenService:Create(new, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = (originalBG and Color3.new(math.min(1, originalBG.R+0.14), math.min(1, originalBG.G+0.14), math.min(1, originalBG.B+0.14))) or Color3.fromRGB(110,130,255), BackgroundTransparency = math.max(0, (new.BackgroundTransparency or 0) - 0.05)})
-                            hoverTween:Play()
-                        end)
+            -- Hover animation for buttons (best-effort)
+            if new:IsA("TextButton") or new:IsA("ImageButton") then
+                local ok, orig = pcall(function() return new.BackgroundColor3 end)
+                local originalBG = ok and orig or Color3.fromRGB(65,150,255)
+                new.MouseEnter:Connect(function()
+                    pcall(function()
+                        game:GetService('TweenService'):Create(new, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.new(math.min(1, originalBG.R+0.14), math.min(1, originalBG.G+0.14), math.min(1, originalBG.B+0.14)), BackgroundTransparency = math.max(0, (new.BackgroundTransparency or 0) - 0.05)}):Play()
                     end)
-                    new.MouseLeave:Connect(function()
-                        pcall(function()
-                            if leaveTween then pcall(function() leaveTween:Cancel() end) end
-                            leaveTween = TweenService:Create(new, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = originalBG or new.BackgroundColor3, BackgroundTransparency = new.BackgroundTransparency or 0})
-                            leaveTween:Play()
-                        end)
+                end)
+                new.MouseLeave:Connect(function()
+                    pcall(function()
+                        game:GetService('TweenService'):Create(new, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = originalBG, BackgroundTransparency = new.BackgroundTransparency or 0}):Play()
                     end)
-                end
+                end)
             end
         end
-    end)
+    end
+end)
 		local Children = {}
 		
 		if type(args[2]) == "table" then
@@ -1261,10 +1238,8 @@ end)
 
 AddEle("Stroke", function(parent, props, ...)
 	local args = {...}
-	local New = InsertTheme(SetProps(Create("UIStroke", parent, {
 		Color = args[1] or Theme["Color Stroke"],
 		Thickness = args[2] or 1,
-		ApplyStrokeMode = "Border"
 	}), props), "Stroke")
 	return New
 end)
@@ -1388,7 +1363,6 @@ local function GetColor(Instance)
 		return "TextColor3"
 	elseif Instance:IsA("ScrollingFrame") then
 		return "ScrollBarImageColor3"
-	elseif Instance:IsA("UIStroke") then
 		return "Color"
 	end
 	return ""
@@ -1428,7 +1402,6 @@ function redzlib:SetTheme(NewTheme)
 	Comnection:FireConnection("ThemeChanged", NewTheme)
 	table.foreach(redzlib.Instances, function(_,Val)
 		if Val.Type == "Gradient" then
-			Val.Instance.Color = Theme["Color Hub 1"]
 		elseif Val.Type == "Frame" then
 			Val.Instance.BackgroundColor3 = Theme["Color Hub 2"]
 		elseif Val.Type == "Stroke" then
