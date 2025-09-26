@@ -940,6 +940,7 @@ local SetProps, SetChildren, InsertTheme, Create do
                 __stroke.Color = Color3.fromRGB(200,200,200)
                 __stroke.Parent = new
 
+
                 -- Reduce default size a little if this object uses explicit pixel sizes (best-effort)
                 if new.Size and new.Size.X.Scale == 0 and new.Size.Y.Scale == 0 then
                     local tryX = new.Size.X.Offset
