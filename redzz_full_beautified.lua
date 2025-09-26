@@ -13,7 +13,7 @@ local redzlib = {
 		Darker = {
 			["Color Hub 1"] = ColorSequence.new({
 				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(25, 25, 25)),
-				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(32.5, 32.5, 32.5)),
+				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(32, 32, 32)),
 				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(25, 25, 25))
 			}),
 			["Color Hub 2"] = Color3.fromRGB(30, 30, 30),
@@ -25,7 +25,7 @@ local redzlib = {
 		Dark = {
 			["Color Hub 1"] = ColorSequence.new({
 				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(40, 40, 40)),
-				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(47.5, 47.5, 47.5)),
+				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(48, 48, 48)),
 				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(40, 40, 40))
 			}),
 			["Color Hub 2"] = Color3.fromRGB(45, 45, 45),
@@ -36,9 +36,9 @@ local redzlib = {
 		},
 		Purple = {
 			["Color Hub 1"] = ColorSequence.new({
-				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(27.5, 25, 30)),
-				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(32.5, 32.5, 32.5)),
-				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(27.5, 25, 30))
+				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(28, 25, 30)),
+				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(32, 32, 32)),
+				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(28, 25, 30))
 			}),
 			["Color Hub 2"] = Color3.fromRGB(30, 30, 30),
 			["Color Stroke"] = Color3.fromRGB(40, 40, 40),
@@ -887,7 +887,7 @@ local redzlib = {
 	end)()
 }
 
-local ViewportSize = workspace.CurrentCamera.ViewportSize
+local ViewportSize = workspace:WaitForChild("Camera").ViewportSize
 local UIScale = ViewportSize.Y / 450
 
 local Settings = redzlib.Settings
@@ -904,7 +904,7 @@ local SetProps, SetChildren, InsertTheme, Create do
 	
 	SetChildren = function(Instance, Children)
 		if Children then
-			table.foreach(Children, function(_,Child)
+			for k,v in pairs(Children, function(_,Child)
 				Child.Parent = Instance
 			end)
 		end
@@ -913,7 +913,7 @@ local SetProps, SetChildren, InsertTheme, Create do
 	
 	SetProps = function(Instance, Props)
 		if Props then
-			table.foreach(Props, function(prop, value)
+			for k,v in pairs(Props, function(prop, value)
 				Instance[prop] = value
 			end)
 		end
@@ -922,8 +922,7 @@ local SetProps, SetChildren, InsertTheme, Create do
 	
 	Create = function(...)
 		local args = {...}
-		if type(args) ~= "table" then return end
-		local new = Instance.new(args[1])
+				local new = Instance.new(args[1])
 
 -- AUTO-INJECT: Add subtle UICorner and hover (no strokes)
 pcall(function()
@@ -936,7 +935,7 @@ pcall(function()
             -- Hover animation for buttons (best-effort)
             if new:IsA("TextButton") or new:IsA("ImageButton") then
                 local ok, orig = pcall(function() return new.BackgroundColor3 end)
-                local originalBG = ok and orig or Color3.fromRGB(65,150,255)
+                local originalBG = ok and orig or Color3.fromRGB(65, 150, 255)
                 new.MouseEnter:Connect(function()
                     pcall(function()
                         game:GetService('TweenService'):Create(new, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.new(math.min(1, originalBG.R+0.14), math.min(1, originalBG.G+0.14), math.min(1, originalBG.B+0.14)), BackgroundTransparency = math.max(0, (new.BackgroundTransparency or 0) - 0.05)}):Play()
@@ -1400,7 +1399,7 @@ function redzlib:SetTheme(NewTheme)
 	Theme = redzlib.Themes[NewTheme]
 	
 	Comnection:FireConnection("ThemeChanged", NewTheme)
-	table.foreach(redzlib.Instances, function(_,Val)
+	for k,v in pairs(redzlib.Instances, function(_,Val)
 		if Val.Type == "Gradient" then
 		elseif Val.Type == "Frame" then
 			Val.Instance.BackgroundColor3 = Theme["Color Hub 2"]
@@ -1772,7 +1771,7 @@ function redzlib:MakeWindow(Configs)
 			CreateTween({Frame, "Transparency", 1, 0.15, true})
 			Screen:Destroy()
 		end
-		table.foreach(DOptions, function(_,Button)
+		for k,v in pairs(DOptions, function(_,Button)
 			Dialog:Button(Button)
 		end)
 		return Dialog
@@ -1871,7 +1870,7 @@ function redzlib:MakeWindow(Configs)
 			end
 			Container.Parent = Containers
 			Container.Size = UDim2.new(1, 0, 1, 150)
-			table.foreach(redzlib.Tabs, function(_,Tab)
+			for k,v in pairs(redzlib.Tabs, function(_,Tab)
 				if Tab.Cont ~= Container then
 					Tab.func:Disable()
 				end
@@ -2349,14 +2348,14 @@ function redzlib:MakeWindow(Configs)
 				
 				AddNewOptions = function(List, Clear)
 					if Clear then
-						table.foreach(Options, RemoveOption)
+						for k,v in pairs(Options, RemoveOption)
 					end
-					table.foreach(List, AddOption)
+					for k,v in pairs(List, AddOption)
 					CallbackSelected()
 					UpdateSelected()
 				end
 				
-				table.foreach(DOptions, AddOption)
+				for k,v in pairs(DOptions, AddOption)
 				CallbackSelected()
 				UpdateSelected()
 			end
@@ -2381,11 +2380,11 @@ function redzlib:MakeWindow(Configs)
 			function Dropdown:Add(...)
 				local NewOptions = {...}
 				if type(NewOptions[1]) == "table" then
-					table.foreach(Option, function(_,Name)
+					for k,v in pairs(Option, function(_,Name)
 						AddOption(Name)
 					end)
 				else
-					table.foreach(NewOptions, function(_,Name)
+					for k,v in pairs(NewOptions, function(_,Name)
 						AddOption(Name)
 					end)
 				end
@@ -2724,58 +2723,74 @@ function redzlib:MakeWindow(Configs)
 	return Window
 end
 
-local fpsLabel = HomeTab:AddLabel("FPS: ...")
-local timeLabel = HomeTab:AddLabel("Time Plays: 00:00")
-local friendsLabel = HomeTab:AddLabel("Friends online: ... / offline: ...")
-local accumulator, frames, fps = 0, 0, 0
-RunService.RenderStepped:Connect(function(dt)
-    frames = frames + 1
-    accumulator = accumulator + dt
-    if accumulator >= 0.5 then
-        fps = math.floor(frames / accumulator + 0.5)
-        frames, accumulator = 0, 0
-        pcall(function() fpsLabel:Set("FPS: "..tostring(fps)) end)
-    end
-end)
-local startTime = tick()
-RunService.Heartbeat:Connect(function()
-    local elapsed = math.floor(tick() - startTime)
-    local m = math.floor(elapsed / 60)
-    local s = elapsed % 60
-    pcall(function() timeLabel:Set(string.format("Time Plays: %02d:%02d", m, s)) end)
-end)
-local function updateFriends()
-    local onlineCount, totalCount = 0, 0
-    local success, friends = pcall(function()
-        if Players and Players.GetFriendsAsync then
-            local t = {}
-            local pages = Players:GetFriendsAsync(LocalPlayer.UserId)
-            if type(pages) == "table" then
-                for _,v in pairs(pages) do table.insert(t, v) end
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+            -- Tab Home
+            local HomeTab = Window:MakeTab({"Home", "home"})
+
+            -- Labels
+            local fpsLabel = HomeTab:AddLabel("FPS: ...")
+            local timeLabel = HomeTab:AddLabel("Time Plays: 00:00")
+            local friendsLabel = HomeTab:AddLabel("Friends online: ... / offline: ...")
+
+            -- FPS update
+            local accumulator, frames, fps = 0, 0, 0
+            RunService.RenderStepped:Connect(function(dt)
+                frames = frames + 1
+                accumulator = accumulator + dt
+                if accumulator >= 0.5 then
+                    fps = math.floor(frames / accumulator + 0.5)
+                    frames, accumulator = 0, 0
+                    pcall(function() fpsLabel:Set("FPS: "..tostring(fps)) end)
+                end
+            end)
+
+            -- Session time update
+            local startTime = tick()
+            RunService.Heartbeat:Connect(function()
+                local elapsed = math.floor(tick() - startTime)
+                local m = math.floor(elapsed / 60)
+                local s = elapsed % 60
+                pcall(function() timeLabel:Set(string.format("Time Plays: %02d:%02d", m, s)) end)
+            end)
+
+            -- Friends update (best-effort)
+            local function updateFriends()
+                local onlineCount, totalCount = 0, 0
+                local success, friends = pcall(function()
+                    if Players and Players.GetFriendsAsync then
+                        local t = {}
+                        local pages = Players:GetFriendsAsync(LocalPlayer.UserId)
+                        if type(pages) == "table" then
+                            for _,v in pairs(pages) do table.insert(t, v) end
+                        end
+                        return t
+                    end
+                    return nil
+                end)
+                if success and friends and type(friends) == "table" and #friends > 0 then
+                    totalCount = #friends
+                    for _,f in ipairs(friends) do
+                        if f.Online then onlineCount = onlineCount + 1 end
+                    end
+                else
+                    totalCount = #Players:GetPlayers()
+                    onlineCount = #Players:GetPlayers()
+                end
+                pcall(function() friendsLabel:Set("Friends online: "..onlineCount.." / offline: "..(totalCount - onlineCount)) end)
             end
-            return t
+
+            updateFriends()
+            spawn(function()
+                while true do
+                    wait(30)
+                    updateFriends()
+                end
+            end)
         end
-        return nil
     end)
-    if success and friends and type(friends) == "table" and #friends > 0 then
-        totalCount = #friends
-        for _,f in ipairs(friends) do
-            if f.Online then onlineCount = onlineCount + 1 end
-        end
-    else
-        totalCount = #Players:GetPlayers()
-        onlineCount = #Players:GetPlayers()
-    end
-    pcall(function() friendsLabel:Set("Friends online: "..onlineCount.." / offline: "..(totalCount - onlineCount)) end)
-end
-
-updateFriends()
-task.spawn(function()
-    while true do
-        task.wait(30)
-        updateFriends()
-    end
 end)
-
 
 return redzlib
