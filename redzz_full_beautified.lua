@@ -2725,3 +2725,86 @@ function redzlib:MakeWindow(Configs)
 end
 
 return redzlib
+
+
+-- [[ AUTO-INJECTED HOME TAB ]]
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Chèn Home Tab mặc định
+spawn(function()
+    pcall(function()
+        if redzlib and redzlib.MakeWindow then
+            local Window = redzlib:MakeWindow({
+                Title = "HNC Hub",
+                SubTitle = "with Home Tab",
+                SaveFolder = "Redz_Clean_With_Home"
+            })
+
+            -- Tab Home
+            local HomeTab = Window:MakeTab({"Home", "home"})
+
+            -- Labels
+            local fpsLabel = HomeTab:AddLabel("FPS: ...")
+            local timeLabel = HomeTab:AddLabel("Time Plaay: 00:00")
+            local friendsLabel = HomeTab:AddLabel("Friends online: ... / offline: ...")
+
+            -- FPS update
+            local accumulator, frames, fps = 0, 0, 0
+            RunService.RenderStepped:Connect(function(dt)
+                frames = frames + 1
+                accumulator = accumulator + dt
+                if accumulator >= 0.5 then
+                    fps = math.floor(frames / accumulator + 0.5)
+                    frames, accumulator = 0, 0
+                    pcall(function() fpsLabel:Set("FPS: "..tostring(fps)) end)
+                end
+            end)
+
+            -- Session time update
+            local startTime = tick()
+            RunService.Heartbeat:Connect(function()
+                local elapsed = math.floor(tick() - startTime)
+                local m = math.floor(elapsed / 60)
+                local s = elapsed % 60
+                pcall(function() timeLabel:Set(string.format("Thời gian chơi: %02d:%02d", m, s)) end)
+            end)
+
+            -- Friends update (best-effort)
+            local function updateFriends()
+                local onlineCount, totalCount = 0, 0
+                local success, friends = pcall(function()
+                    if Players and Players.GetFriendsAsync then
+                        local t = {}
+                        local pages = Players:GetFriendsAsync(LocalPlayer.UserId)
+                        if type(pages) == "table" then
+                            for _,v in pairs(pages) do table.insert(t, v) end
+                        end
+                        return t
+                    end
+                    return nil
+                end)
+                if success and friends and type(friends) == "table" and #friends > 0 then
+                    totalCount = #friends
+                    for _,f in ipairs(friends) do
+                        if f.Online then onlineCount = onlineCount + 1 end
+                    end
+                else
+                    totalCount = #Players:GetPlayers()
+                    onlineCount = #Players:GetPlayers()
+                end
+                pcall(function() friendsLabel:Set("Bạn bè online: "..onlineCount.." / offline: "..(totalCount - onlineCount)) end)
+            end
+
+            updateFriends()
+            spawn(function()
+                while true do
+                    wait(30)
+                    updateFriends()
+                end
+            end)
+        end
+    end)
+end)
+-- [[ END HOME TAB INJECTION ]]
