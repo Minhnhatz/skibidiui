@@ -1,2853 +1,4626 @@
-local MarketplaceService = game:GetService("MarketplaceService")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local HttpService = game:GetService("HttpService")
-local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
-local Players = game:GetService("Players")
-local Player = Players.LocalPlayer
-local PlayerMouse = Player:GetMouse()
+--[[
 
-local redzlib = {
-	Themes = {
-		Darker = {
-			["Color Hub 1"] = ColorSequence.new({
-				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(25, 25, 25)),
-				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(32, 32, 32)),
-				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(25, 25, 25))
-			}),
-			["Color Hub 2"] = Color3.fromRGB(30, 30, 30),
-			["Color Stroke"] = Color3.fromRGB(40, 40, 40),
-			["Color Theme"] = Color3.fromRGB(88, 101, 242),
-			["Color Text"] = Color3.fromRGB(243, 243, 243),
-			["Color Dark Text"] = Color3.fromRGB(180, 180, 180)
+Sirius
+
+© 2024 Sirius 
+All Rights Reserved.
+
+--]]
+
+
+--[[
+
+Sirius Pre-Hyperion Todo List
+
+High Priority
+ - Invisible, Godmode
+ - All Scripts buttons and Universal scripts
+ - Chat Spam Detection
+ - Custom Script Prompts
+ - Player Kill, Spectate and ESP via Playerlist
+ - http.request support for Sirius Intelligent HTTP Interception
+ - Performance Improvements to Roblox itself
+ 
+Moderate Priority
+ - Spectate Animation, like GTA serverhop, tween to high in the sky, then tween to other player's head
+ - Chat Spy Tracking: Follows who they're whispering to based on original message
+ - Starlight 
+ - Chatlogs
+ - GTA Serverhop
+ - Anti-Spam (chat) formula, based on text length, caps, emojis etc.
+ - Reduce any form of detection of Sirius
+ - Automated lowering of graphics on lower FPS, ensure no false positives
+ 
+Potential Future Setting Options
+ - Block entire domain or just the specific page in the Sirius Intelligent Flow Interception. Do this on case by case, e.g blocked = {"link.com", true} - true being whether its the domain or not
+ - Serverhop type (default/gta)
+ - Hook Specific Functions to reduce the need for external scripts
+ 
+--]]
+
+-- Ensure the game is loaded 
+if not game:IsLoaded() then
+	game.Loaded:Wait()
+end
+
+-- Check License Tier
+local Pro = true -- We're open sourced now!
+
+-- Create Variables for Roblox Services
+local coreGui = game:GetService("CoreGui")
+local httpService = game:GetService("HttpService")
+local lighting = game:GetService("Lighting")
+local players = game:GetService("Players")
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local runService = game:GetService("RunService")
+local guiService = game:GetService("GuiService")
+local statsService = game:GetService("Stats")
+local starterGui = game:GetService("StarterGui")
+local teleportService = game:GetService("TeleportService")
+local tweenService = game:GetService("TweenService")
+local userInputService = game:GetService('UserInputService')
+local gameSettings = UserSettings():GetService("UserGameSettings")
+
+-- Variables
+local camera = workspace.CurrentCamera
+local getMessage = replicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 1) and replicatedStorage.DefaultChatSystemChatEvents:WaitForChild("OnMessageDoneFiltering", 1)
+local localPlayer = players.LocalPlayer
+local notifications = {}
+local friendsCooldown = 0
+local mouse = localPlayer:GetMouse()
+local promptedDisconnected = false
+local smartBarOpen = false
+local debounce = false
+local searchingForPlayer = false
+local musicQueue = {}
+local currentAudio
+local lowerName = localPlayer.Name:lower()
+local lowerDisplayName = localPlayer.DisplayName:lower()
+local placeId = game.PlaceId
+local jobId = game.JobId
+local checkingForKey = false
+local originalTextValues = {}
+local creatorId = game.CreatorId
+local noclipDefaults = {}
+local movers = {}
+local creatorType = game.CreatorType
+local espContainer = Instance.new("Folder", gethui and gethui() or coreGui)
+local oldVolume = gameSettings.MasterVolume
+
+-- Configurable Core Values
+local siriusValues = {
+	siriusVersion = "1.26",
+	siriusName = "Sirius",
+	releaseType = "Stable",
+	siriusFolder = "Sirius",
+	settingsFile = "settings.srs",
+	interfaceAsset = 14183548964,
+	cdn = "https://cdn.sirius.menu/SIRIUS-SCRIPT-CORE-ASSETS/",
+	icons = "https://cdn.sirius.menu/SIRIUS-SCRIPT-CORE-ASSETS/Icons/",
+	enableExperienceSync = false, -- Games are no longer available due to a lack of whitelisting, they may be made open source at a later date, however they are patched as of now and are useless to the end user. Turning this on may introduce "fake functionality".
+	games = {
+		BreakingPoint = {
+			name = "Breaking Point",
+			description = "Players are seated around a table. Their only goal? To be the last one standing. Execute this script to gain an unfair advantage.",
+			id = 648362523,
+			enabled = true,
+			raw = "BreakingPoint",
+			minimumTier = "Free",
 		},
-		Dark = {
-			["Color Hub 1"] = ColorSequence.new({
-				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(40, 40, 40)),
-				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(48, 48, 48)),
-				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(40, 40, 40))
-			}),
-			["Color Hub 2"] = Color3.fromRGB(45, 45, 45),
-			["Color Stroke"] = Color3.fromRGB(65, 65, 65),
-			["Color Theme"] = Color3.fromRGB(65, 150, 255),
-			["Color Text"] = Color3.fromRGB(245, 245, 245),
-			["Color Dark Text"] = Color3.fromRGB(190, 190, 190)
+		MurderMystery2 = {
+			name = "Murder Mystery 2",
+			description = "A murder has occured, will you be the one to find the murderer, or kill your next victim? Execute this script to gain an unfair advantage.",
+			id = 142823291,
+			enabled = true,
+			raw = "MurderMystery2",
+			minimumTier = "Free",
 		},
-		Purple = {
-			["Color Hub 1"] = ColorSequence.new({
-				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(28, 25, 30)),
-				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(32, 32, 32)),
-				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(28, 25, 30))
-			}),
-			["Color Hub 2"] = Color3.fromRGB(30, 30, 30),
-			["Color Stroke"] = Color3.fromRGB(40, 40, 40),
-			["Color Theme"] = Color3.fromRGB(150, 0, 255),
-			["Color Text"] = Color3.fromRGB(240, 240, 240),
-			["Color Dark Text"] = Color3.fromRGB(180, 180, 180)
-		}
+		TowerOfHell = {
+			name = "Tower Of Hell",
+			description = "A difficult popular parkouring game, with random levels and modifiers. Execute this script to gain an unfair advantage.",
+			id = 1962086868,
+			enabled = true,
+			raw = "TowerOfHell",
+			minimumTier = "Free",
+		},
+		Strucid = {
+			name = "Strucid",
+			description = "Fight friends and enemies in Strucid with building mechanics! Execute this script to gain an unfair advantage.",
+			id = 2377868063,
+			enabled = true,
+			raw = "Strucid",
+			minimumTier = "Free",
+		},
+		PhantomForces = {
+			name = "Phantom Forces",
+			description = "One of the most popular FPS shooters from the team at StyLiS Studios. Execute this script to gain an unfair advantage.",
+			id = 292439477,
+			enabled = true,
+			raw = "PhantomForces",
+			minimumTier = "Pro",
+		},
 	},
-	Info = {
-		Version = "1.1.0"
+	rawTree = "https://raw.githubusercontent.com/SiriusSoftwareLtd/Sirius/Sirius/games/",
+	neonModule = "https://raw.githubusercontent.com/shlexware/Sirius/request/library/neon.lua",
+	senseRaw = "https://raw.githubusercontent.com/shlexware/Sirius/request/library/sense/source.lua",
+	executors = {"synapse x", "script-ware", "krnl", "scriptware", "comet", "valyse", "fluxus", "electron", "hydrogen"},
+	disconnectTypes = { {"ban", {"ban", "perm"}}, {"network", {"internet connection", "network"}} },
+	nameGeneration = {
+		adjectives = {"Cool", "Awesome", "Epic", "Ninja", "Super", "Mystic", "Swift", "Golden", "Diamond", "Silver", "Mint", "Roblox", "Amazing"},
+		nouns = {"Player", "Gamer", "Master", "Legend", "Hero", "Ninja", "Wizard", "Champion", "Warrior", "Sorcerer"}
 	},
-	Save = {
-		UISize = {550, 380},
-		TabSize = 160,
-		Theme = "Darker"
+	administratorRoles = {"mod","admin","staff","dev","founder","owner","supervis","manager","management","executive","president","chairman","chairwoman","chairperson","director"},
+	transparencyProperties = {
+		UIStroke = {'Transparency'},
+		Frame = {'BackgroundTransparency'},
+		TextButton = {'BackgroundTransparency', 'TextTransparency'},
+		TextLabel = {'BackgroundTransparency', 'TextTransparency'},
+		TextBox = {'BackgroundTransparency', 'TextTransparency'},
+		ImageLabel = {'BackgroundTransparency', 'ImageTransparency'},
+		ImageButton = {'BackgroundTransparency', 'ImageTransparency'},
+		ScrollingFrame = {'BackgroundTransparency', 'ScrollBarImageTransparency'}
 	},
-	Settings = {},
-	Connection = {},
-	Instances = {},
-	Elements = {},
-	Options = {},
-	Flags = {},
-	Tabs = {},
-	Icons = (function()
-	  -- This file was @generated by Tarmac. It is not intended for manual editing.
-		return {
-			["accessibility"] = "rbxassetid://10709751939",
-			["activity"] = "rbxassetid://10709752035",
-			["airvent"] = "rbxassetid://10709752131",
-			["airplay"] = "rbxassetid://10709752254",
-			["alarmcheck"] = "rbxassetid://10709752405",
-			["alarmclock"] = "rbxassetid://10709752630",
-			["alarmclockoff"] = "rbxassetid://10709752508",
-			["alarmminus"] = "rbxassetid://10709752732",
-			["alarmplus"] = "rbxassetid://10709752825",
-			["album"] = "rbxassetid://10709752906",
-			["alertcircle"] = "rbxassetid://10709752996",
-			["alertoctagon"] = "rbxassetid://10709753064",
-			["alerttriangle"] = "rbxassetid://10709753149",
-			["aligncenter"] = "rbxassetid://10709753570",
-			["aligncenterhorizontal"] = "rbxassetid://10709753272",
-			["aligncentervertical"] = "rbxassetid://10709753421",
-			["alignendhorizontal"] = "rbxassetid://10709753692",
-			["alignendvertical"] = "rbxassetid://10709753808",
-			["alignhorizontaldistributecenter"] = "rbxassetid://10747779791",
-			["alignhorizontaldistributeend"] = "rbxassetid://10747784534",
-			["alignhorizontaldistributestart"] = "rbxassetid://10709754118",
-			["alignhorizontaljustifycenter"] = "rbxassetid://10709754204",
-			["alignhorizontaljustifyend"] = "rbxassetid://10709754317",
-			["alignhorizontaljustifystart"] = "rbxassetid://10709754436",
-			["alignhorizontalspacearound"] = "rbxassetid://10709754590",
-			["alignhorizontalspacebetween"] = "rbxassetid://10709754749",
-			["alignjustify"] = "rbxassetid://10709759610",
-			["alignleft"] = "rbxassetid://10709759764",
-			["alignright"] = "rbxassetid://10709759895",
-			["alignstarthorizontal"] = "rbxassetid://10709760051",
-			["alignstartvertical"] = "rbxassetid://10709760244",
-			["alignverticaldistributecenter"] = "rbxassetid://10709760351",
-			["alignverticaldistributeend"] = "rbxassetid://10709760434",
-			["alignverticaldistributestart"] = "rbxassetid://10709760612",
-			["alignverticaljustifycenter"] = "rbxassetid://10709760814",
-			["alignverticaljustifyend"] = "rbxassetid://10709761003",
-			["alignverticaljustifystart"] = "rbxassetid://10709761176",
-			["alignverticalspacearound"] = "rbxassetid://10709761324",
-			["alignverticalspacebetween"] = "rbxassetid://10709761434",
-			["anchor"] = "rbxassetid://10709761530",
-			["angry"] = "rbxassetid://10709761629",
-			["annoyed"] = "rbxassetid://10709761722",
-			["aperture"] = "rbxassetid://10709761813",
-			["apple"] = "rbxassetid://10709761889",
-			["archive"] = "rbxassetid://10709762233",
-			["archiverestore"] = "rbxassetid://10709762058",
-			["armchair"] = "rbxassetid://10709762327",
-			["arrowbigdown"] = "rbxassetid://10747796644",
-			["arrowbigleft"] = "rbxassetid://10709762574",
-			["arrowbigright"] = "rbxassetid://10709762727",
-			["arrowbigup"] = "rbxassetid://10709762879",
-			["arrowdown"] = "rbxassetid://10709767827",
-			["arrowdowncircle"] = "rbxassetid://10709763034",
-			["arrowdownleft"] = "rbxassetid://10709767656",
-			["arrowdownright"] = "rbxassetid://10709767750",
-			["arrowleft"] = "rbxassetid://10709768114",
-			["arrowleftcircle"] = "rbxassetid://10709767936",
-			["arrowleftright"] = "rbxassetid://10709768019",
-			["arrowright"] = "rbxassetid://10709768347",
-			["arrowrightcircle"] = "rbxassetid://10709768226",
-			["arrowup"] = "rbxassetid://10709768939",
-			["arrowupcircle"] = "rbxassetid://10709768432",
-			["arrowupdown"] = "rbxassetid://10709768538",
-			["arrowupleft"] = "rbxassetid://10709768661",
-			["arrowupright"] = "rbxassetid://10709768787",
-			["asterisk"] = "rbxassetid://10709769095",
-			["atsign"] = "rbxassetid://10709769286",
-			["award"] = "rbxassetid://10709769406",
-			["axe"] = "rbxassetid://10709769508",
-			["axis3d"] = "rbxassetid://10709769598",
-			["baby"] = "rbxassetid://10709769732",
-			["backpack"] = "rbxassetid://10709769841",
-			["baggageclaim"] = "rbxassetid://10709769935",
-			["banana"] = "rbxassetid://10709770005",
-			["banknote"] = "rbxassetid://10709770178",
-			["barchart"] = "rbxassetid://10709773755",
-			["barchart2"] = "rbxassetid://10709770317",
-			["barchart3"] = "rbxassetid://10709770431",
-			["barchart4"] = "rbxassetid://10709770560",
-			["barcharthorizontal"] = "rbxassetid://10709773669",
-			["barcode"] = "rbxassetid://10747360675",
-			["baseline"] = "rbxassetid://10709773863",
-			["bath"] = "rbxassetid://10709773963",
-			["battery"] = "rbxassetid://10709774640",
-			["batterycharging"] = "rbxassetid://10709774068",
-			["batteryfull"] = "rbxassetid://10709774206",
-			["batterylow"] = "rbxassetid://10709774370",
-			["batterymedium"] = "rbxassetid://10709774513",
-			["beaker"] = "rbxassetid://10709774756",
-			["bed"] = "rbxassetid://10709775036",
-			["beddouble"] = "rbxassetid://10709774864",
-			["bedsingle"] = "rbxassetid://10709774968",
-			["beer"] = "rbxassetid://10709775167",
-			["bell"] = "rbxassetid://10709775704",
-			["bellminus"] = "rbxassetid://10709775241",
-			["belloff"] = "rbxassetid://10709775320",
-			["bellplus"] = "rbxassetid://10709775448",
-			["bellring"] = "rbxassetid://10709775560",
-			["bike"] = "rbxassetid://10709775894",
-			["binary"] = "rbxassetid://10709776050",
-			["bitcoin"] = "rbxassetid://10709776126",
-			["bluetooth"] = "rbxassetid://10709776655",
-			["bluetoothconnected"] = "rbxassetid://10709776240",
-			["bluetoothoff"] = "rbxassetid://10709776344",
-			["bluetoothsearching"] = "rbxassetid://10709776501",
-			["bold"] = "rbxassetid://10747813908",
-			["bomb"] = "rbxassetid://10709781460",
-			["bone"] = "rbxassetid://10709781605",
-			["book"] = "rbxassetid://10709781824",
-			["bookopen"] = "rbxassetid://10709781717",
-			["bookmark"] = "rbxassetid://10709782154",
-			["bookmarkminus"] = "rbxassetid://10709781919",
-			["bookmarkplus"] = "rbxassetid://10709782044",
-			["bot"] = "rbxassetid://10709782230",
-			["box"] = "rbxassetid://10709782497",
-			["boxselect"] = "rbxassetid://10709782342",
-			["boxes"] = "rbxassetid://10709782582",
-			["briefcase"] = "rbxassetid://10709782662",
-			["brush"] = "rbxassetid://10709782758",
-			["bug"] = "rbxassetid://10709782845",
-			["building"] = "rbxassetid://10709783051",
-			["building2"] = "rbxassetid://10709782939",
-			["bus"] = "rbxassetid://10709783137",
-			["cake"] = "rbxassetid://10709783217",
-			["calculator"] = "rbxassetid://10709783311",
-			["calendar"] = "rbxassetid://10709789505",
-			["calendarcheck"] = "rbxassetid://10709783474",
-			["calendarcheck2"] = "rbxassetid://10709783392",
-			["calendarclock"] = "rbxassetid://10709783577",
-			["calendardays"] = "rbxassetid://10709783673",
-			["calendarheart"] = "rbxassetid://10709783835",
-			["calendarminus"] = "rbxassetid://10709783959",
-			["calendaroff"] = "rbxassetid://10709788784",
-			["calendarplus"] = "rbxassetid://10709788937",
-			["calendarrange"] = "rbxassetid://10709789053",
-			["calendarsearch"] = "rbxassetid://10709789200",
-			["calendarx"] = "rbxassetid://10709789407",
-			["calendarx2"] = "rbxassetid://10709789329",
-			["camera"] = "rbxassetid://10709789686",
-			["cameraoff"] = "rbxassetid://10747822677",
-			["car"] = "rbxassetid://10709789810",
-			["carrot"] = "rbxassetid://10709789960",
-			["cast"] = "rbxassetid://10709790097",
-			["charge"] = "rbxassetid://10709790202",
-			["check"] = "rbxassetid://10709790644",
-			["checkcircle"] = "rbxassetid://10709790387",
-			["checkcircle2"] = "rbxassetid://10709790298",
-			["checksquare"] = "rbxassetid://10709790537",
-			["chefhat"] = "rbxassetid://10709790757",
-			["cherry"] = "rbxassetid://10709790875",
-			["chevrondown"] = "rbxassetid://10709790948",
-			["chevronfirst"] = "rbxassetid://10709791015",
-			["chevronlast"] = "rbxassetid://10709791130",
-			["chevronleft"] = "rbxassetid://10709791281",
-			["chevronright"] = "rbxassetid://10709791437",
-			["chevronup"] = "rbxassetid://10709791523",
-			["chevronsdown"] = "rbxassetid://10709796864",
-			["chevronsdownup"] = "rbxassetid://10709791632",
-			["chevronsleft"] = "rbxassetid://10709797151",
-			["chevronsleftright"] = "rbxassetid://10709797006",
-			["chevronsright"] = "rbxassetid://10709797382",
-			["chevronsrightleft"] = "rbxassetid://10709797274",
-			["chevronsup"] = "rbxassetid://10709797622",
-			["chevronsupdown"] = "rbxassetid://10709797508",
-			["chrome"] = "rbxassetid://10709797725",
-			["circle"] = "rbxassetid://10709798174",
-			["circledot"] = "rbxassetid://10709797837",
-			["circleellipsis"] = "rbxassetid://10709797985",
-			["circleslashed"] = "rbxassetid://10709798100",
-			["citrus"] = "rbxassetid://10709798276",
-			["clapperboard"] = "rbxassetid://10709798350",
-			["clipboard"] = "rbxassetid://10709799288",
-			["clipboardcheck"] = "rbxassetid://10709798443",
-			["clipboardcopy"] = "rbxassetid://10709798574",
-			["clipboardedit"] = "rbxassetid://10709798682",
-			["clipboardlist"] = "rbxassetid://10709798792",
-			["clipboardsignature"] = "rbxassetid://10709798890",
-			["clipboardtype"] = "rbxassetid://10709798999",
-			["clipboardx"] = "rbxassetid://10709799124",
-			["clock"] = "rbxassetid://10709805144",
-			["clock1"] = "rbxassetid://10709799535",
-			["clock10"] = "rbxassetid://10709799718",
-			["clock11"] = "rbxassetid://10709799818",
-			["clock12"] = "rbxassetid://10709799962",
-			["clock2"] = "rbxassetid://10709803876",
-			["clock3"] = "rbxassetid://10709803989",
-			["clock4"] = "rbxassetid://10709804164",
-			["clock5"] = "rbxassetid://10709804291",
-			["clock6"] = "rbxassetid://10709804435",
-			["clock7"] = "rbxassetid://10709804599",
-			["clock8"] = "rbxassetid://10709804784",
-			["clock9"] = "rbxassetid://10709804996",
-			["cloud"] = "rbxassetid://10709806740",
-			["cloudcog"] = "rbxassetid://10709805262",
-			["clouddrizzle"] = "rbxassetid://10709805371",
-			["cloudfog"] = "rbxassetid://10709805477",
-			["cloudhail"] = "rbxassetid://10709805596",
-			["cloudlightning"] = "rbxassetid://10709805727",
-			["cloudmoon"] = "rbxassetid://10709805942",
-			["cloudmoonrain"] = "rbxassetid://10709805838",
-			["cloudoff"] = "rbxassetid://10709806060",
-			["cloudrain"] = "rbxassetid://10709806277",
-			["cloudrainwind"] = "rbxassetid://10709806166",
-			["cloudsnow"] = "rbxassetid://10709806374",
-			["cloudsun"] = "rbxassetid://10709806631",
-			["cloudsunrain"] = "rbxassetid://10709806475",
-			["cloudy"] = "rbxassetid://10709806859",
-			["clover"] = "rbxassetid://10709806995",
-			["code"] = "rbxassetid://10709810463",
-			["code2"] = "rbxassetid://10709807111",
-			["codepen"] = "rbxassetid://10709810534",
-			["codesandbox"] = "rbxassetid://10709810676",
-			["coffee"] = "rbxassetid://10709810814",
-			["cog"] = "rbxassetid://10709810948",
-			["coins"] = "rbxassetid://10709811110",
-			["columns"] = "rbxassetid://10709811261",
-			["command"] = "rbxassetid://10709811365",
-			["compass"] = "rbxassetid://10709811445",
-			["component"] = "rbxassetid://10709811595",
-			["conciergebell"] = "rbxassetid://10709811706",
-			["connection"] = "rbxassetid://10747361219",
-			["contact"] = "rbxassetid://10709811834",
-			["contrast"] = "rbxassetid://10709811939",
-			["cookie"] = "rbxassetid://10709812067",
-			["copy"] = "rbxassetid://10709812159",
-			["copyleft"] = "rbxassetid://10709812251",
-			["copyright"] = "rbxassetid://10709812311",
-			["cornerdownleft"] = "rbxassetid://10709812396",
-			["cornerdownright"] = "rbxassetid://10709812485",
-			["cornerleftdown"] = "rbxassetid://10709812632",
-			["cornerleftup"] = "rbxassetid://10709812784",
-			["cornerrightdown"] = "rbxassetid://10709812939",
-			["cornerrightup"] = "rbxassetid://10709813094",
-			["cornerupleft"] = "rbxassetid://10709813185",
-			["cornerupright"] = "rbxassetid://10709813281",
-			["cpu"] = "rbxassetid://10709813383",
-			["croissant"] = "rbxassetid://10709818125",
-			["crop"] = "rbxassetid://10709818245",
-			["cross"] = "rbxassetid://10709818399",
-			["crosshair"] = "rbxassetid://10709818534",
-			["crown"] = "rbxassetid://10709818626",
-			["cupsoda"] = "rbxassetid://10709818763",
-			["curlybraces"] = "rbxassetid://10709818847",
-			["currency"] = "rbxassetid://10709818931",
-			["database"] = "rbxassetid://10709818996",
-			["delete"] = "rbxassetid://10709819059",
-			["diamond"] = "rbxassetid://10709819149",
-			["dice1"] = "rbxassetid://10709819266",
-			["dice2"] = "rbxassetid://10709819361",
-			["dice3"] = "rbxassetid://10709819508",
-			["dice4"] = "rbxassetid://10709819670",
-			["dice5"] = "rbxassetid://10709819801",
-			["dice6"] = "rbxassetid://10709819896",
-			["dices"] = "rbxassetid://10723343321",
-			["diff"] = "rbxassetid://10723343416",
-			["disc"] = "rbxassetid://10723343537",
-			["divide"] = "rbxassetid://10723343805",
-			["dividecircle"] = "rbxassetid://10723343636",
-			["dividesquare"] = "rbxassetid://10723343737",
-			["dollarsign"] = "rbxassetid://10723343958",
-			["download"] = "rbxassetid://10723344270",
-			["downloadcloud"] = "rbxassetid://10723344088",
-			["droplet"] = "rbxassetid://10723344432",
-			["droplets"] = "rbxassetid://10734883356",
-			["drumstick"] = "rbxassetid://10723344737",
-			["edit"] = "rbxassetid://10734883598",
-			["edit2"] = "rbxassetid://10723344885",
-			["edit3"] = "rbxassetid://10723345088",
-			["egg"] = "rbxassetid://10723345518",
-			["eggfried"] = "rbxassetid://10723345347",
-			["electricity"] = "rbxassetid://10723345749",
-			["electricityoff"] = "rbxassetid://10723345643",
-			["equal"] = "rbxassetid://10723345990",
-			["equalnot"] = "rbxassetid://10723345866",
-			["eraser"] = "rbxassetid://10723346158",
-			["euro"] = "rbxassetid://10723346372",
-			["expand"] = "rbxassetid://10723346553",
-			["externallink"] = "rbxassetid://10723346684",
-			["eye"] = "rbxassetid://10723346959",
-			["eyeoff"] = "rbxassetid://10723346871",
-			["factory"] = "rbxassetid://10723347051",
-			["fan"] = "rbxassetid://10723354359",
-			["fastforward"] = "rbxassetid://10723354521",
-			["feather"] = "rbxassetid://10723354671",
-			["figma"] = "rbxassetid://10723354801",
-			["file"] = "rbxassetid://10723374641",
-			["filearchive"] = "rbxassetid://10723354921",
-			["fileaudio"] = "rbxassetid://10723355148",
-			["fileaudio2"] = "rbxassetid://10723355026",
-			["fileaxis3d"] = "rbxassetid://10723355272",
-			["filebadge"] = "rbxassetid://10723355622",
-			["filebadge2"] = "rbxassetid://10723355451",
-			["filebarchart"] = "rbxassetid://10723355887",
-			["filebarchart2"] = "rbxassetid://10723355746",
-			["filebox"] = "rbxassetid://10723355989",
-			["filecheck"] = "rbxassetid://10723356210",
-			["filecheck2"] = "rbxassetid://10723356100",
-			["fileclock"] = "rbxassetid://10723356329",
-			["filecode"] = "rbxassetid://10723356507",
-			["filecog"] = "rbxassetid://10723356830",
-			["filecog2"] = "rbxassetid://10723356676",
-			["filediff"] = "rbxassetid://10723357039",
-			["filedigit"] = "rbxassetid://10723357151",
-			["filedown"] = "rbxassetid://10723357322",
-			["fileedit"] = "rbxassetid://10723357495",
-			["fileheart"] = "rbxassetid://10723357637",
-			["fileimage"] = "rbxassetid://10723357790",
-			["fileinput"] = "rbxassetid://10723357933",
-			["filejson"] = "rbxassetid://10723364435",
-			["filejson2"] = "rbxassetid://10723364361",
-			["filekey"] = "rbxassetid://10723364605",
-			["filekey2"] = "rbxassetid://10723364515",
-			["filelinechart"] = "rbxassetid://10723364725",
-			["filelock"] = "rbxassetid://10723364957",
-			["filelock2"] = "rbxassetid://10723364861",
-			["fileminus"] = "rbxassetid://10723365254",
-			["fileminus2"] = "rbxassetid://10723365086",
-			["fileoutput"] = "rbxassetid://10723365457",
-			["filepiechart"] = "rbxassetid://10723365598",
-			["fileplus"] = "rbxassetid://10723365877",
-			["fileplus2"] = "rbxassetid://10723365766",
-			["filequestion"] = "rbxassetid://10723365987",
-			["filescan"] = "rbxassetid://10723366167",
-			["filesearch"] = "rbxassetid://10723366550",
-			["filesearch2"] = "rbxassetid://10723366340",
-			["filesignature"] = "rbxassetid://10723366741",
-			["filespreadsheet"] = "rbxassetid://10723366962",
-			["filesymlink"] = "rbxassetid://10723367098",
-			["fileterminal"] = "rbxassetid://10723367244",
-			["filetext"] = "rbxassetid://10723367380",
-			["filetype"] = "rbxassetid://10723367606",
-			["filetype2"] = "rbxassetid://10723367509",
-			["fileup"] = "rbxassetid://10723367734",
-			["filevideo"] = "rbxassetid://10723373884",
-			["filevideo2"] = "rbxassetid://10723367834",
-			["filevolume"] = "rbxassetid://10723374172",
-			["filevolume2"] = "rbxassetid://10723374030",
-			["filewarning"] = "rbxassetid://10723374276",
-			["filex"] = "rbxassetid://10723374544",
-			["filex2"] = "rbxassetid://10723374378",
-			["files"] = "rbxassetid://10723374759",
-			["film"] = "rbxassetid://10723374981",
-			["filter"] = "rbxassetid://10723375128",
-			["fingerprint"] = "rbxassetid://10723375250",
-			["flag"] = "rbxassetid://10723375890",
-			["flagoff"] = "rbxassetid://10723375443",
-			["flagtriangleleft"] = "rbxassetid://10723375608",
-			["flagtriangleright"] = "rbxassetid://10723375727",
-			["flame"] = "rbxassetid://10723376114",
-			["flashlight"] = "rbxassetid://10723376471",
-			["flashlightoff"] = "rbxassetid://10723376365",
-			["flaskconical"] = "rbxassetid://10734883986",
-			["flaskround"] = "rbxassetid://10723376614",
-			["fliphorizontal"] = "rbxassetid://10723376884",
-			["fliphorizontal2"] = "rbxassetid://10723376745",
-			["flipvertical"] = "rbxassetid://10723377138",
-			["flipvertical2"] = "rbxassetid://10723377026",
-			["flower"] = "rbxassetid://10747830374",
-			["flower2"] = "rbxassetid://10723377305",
-			["focus"] = "rbxassetid://10723377537",
-			["folder"] = "rbxassetid://10723387563",
-			["folderarchive"] = "rbxassetid://10723384478",
-			["foldercheck"] = "rbxassetid://10723384605",
-			["folderclock"] = "rbxassetid://10723384731",
-			["folderclosed"] = "rbxassetid://10723384893",
-			["foldercog"] = "rbxassetid://10723385213",
-			["foldercog2"] = "rbxassetid://10723385036",
-			["folderdown"] = "rbxassetid://10723385338",
-			["folderedit"] = "rbxassetid://10723385445",
-			["folderheart"] = "rbxassetid://10723385545",
-			["folderinput"] = "rbxassetid://10723385721",
-			["folderkey"] = "rbxassetid://10723385848",
-			["folderlock"] = "rbxassetid://10723386005",
-			["folderminus"] = "rbxassetid://10723386127",
-			["folderopen"] = "rbxassetid://10723386277",
-			["folderoutput"] = "rbxassetid://10723386386",
-			["folderplus"] = "rbxassetid://10723386531",
-			["foldersearch"] = "rbxassetid://10723386787",
-			["foldersearch2"] = "rbxassetid://10723386674",
-			["foldersymlink"] = "rbxassetid://10723386930",
-			["foldertree"] = "rbxassetid://10723387085",
-			["folderup"] = "rbxassetid://10723387265",
-			["folderx"] = "rbxassetid://10723387448",
-			["folders"] = "rbxassetid://10723387721",
-			["forminput"] = "rbxassetid://10723387841",
-			["forward"] = "rbxassetid://10723388016",
-			["frame"] = "rbxassetid://10723394389",
-			["framer"] = "rbxassetid://10723394565",
-			["frown"] = "rbxassetid://10723394681",
-			["fuel"] = "rbxassetid://10723394846",
-			["functionsquare"] = "rbxassetid://10723395041",
-			["gamepad"] = "rbxassetid://10723395457",
-			["gamepad2"] = "rbxassetid://10723395215",
-			["gauge"] = "rbxassetid://10723395708",
-			["gavel"] = "rbxassetid://10723395896",
-			["gem"] = "rbxassetid://10723396000",
-			["ghost"] = "rbxassetid://10723396107",
-			["gift"] = "rbxassetid://10723396402",
-			["giftcard"] = "rbxassetid://10723396225",
-			["gitbranch"] = "rbxassetid://10723396676",
-			["gitbranchplus"] = "rbxassetid://10723396542",
-			["gitcommit"] = "rbxassetid://10723396812",
-			["gitcompare"] = "rbxassetid://10723396954",
-			["gitfork"] = "rbxassetid://10723397049",
-			["gitmerge"] = "rbxassetid://10723397165",
-			["gitpullrequest"] = "rbxassetid://10723397431",
-			["gitpullrequestclosed"] = "rbxassetid://10723397268",
-			["gitpullrequestdraft"] = "rbxassetid://10734884302",
-			["glass"] = "rbxassetid://10723397788",
-			["glass2"] = "rbxassetid://10723397529",
-			["glasswater"] = "rbxassetid://10723397678",
-			["glasses"] = "rbxassetid://10723397895",
-			["globe"] = "rbxassetid://10723404337",
-			["globe2"] = "rbxassetid://10723398002",
-			["grab"] = "rbxassetid://10723404472",
-			["graduationcap"] = "rbxassetid://10723404691",
-			["grape"] = "rbxassetid://10723404822",
-			["grid"] = "rbxassetid://10723404936",
-			["griphorizontal"] = "rbxassetid://10723405089",
-			["gripvertical"] = "rbxassetid://10723405236",
-			["hammer"] = "rbxassetid://10723405360",
-			["hand"] = "rbxassetid://10723405649",
-			["handmetal"] = "rbxassetid://10723405508",
-			["harddrive"] = "rbxassetid://10723405749",
-			["hardhat"] = "rbxassetid://10723405859",
-			["hash"] = "rbxassetid://10723405975",
-			["haze"] = "rbxassetid://10723406078",
-			["headphones"] = "rbxassetid://10723406165",
-			["heart"] = "rbxassetid://10723406885",
-			["heartcrack"] = "rbxassetid://10723406299",
-			["hearthandshake"] = "rbxassetid://10723406480",
-			["heartoff"] = "rbxassetid://10723406662",
-			["heartpulse"] = "rbxassetid://10723406795",
-			["helpcircle"] = "rbxassetid://10723406988",
-			["hexagon"] = "rbxassetid://10723407092",
-			["highlighter"] = "rbxassetid://10723407192",
-			["history"] = "rbxassetid://10723407335",
-			["home"] = "rbxassetid://10723407389",
-			["hourglass"] = "rbxassetid://10723407498",
-			["icecream"] = "rbxassetid://10723414308",
-			["image"] = "rbxassetid://10723415040",
-			["imageminus"] = "rbxassetid://10723414487",
-			["imageoff"] = "rbxassetid://10723414677",
-			["imageplus"] = "rbxassetid://10723414827",
-			["import"] = "rbxassetid://10723415205",
-			["inbox"] = "rbxassetid://10723415335",
-			["indent"] = "rbxassetid://10723415494",
-			["indianrupee"] = "rbxassetid://10723415642",
-			["infinity"] = "rbxassetid://10723415766",
-			["info"] = "rbxassetid://10723415903",
-			["inspect"] = "rbxassetid://10723416057",
-			["italic"] = "rbxassetid://10723416195",
-			["japaneseyen"] = "rbxassetid://10723416363",
-			["joystick"] = "rbxassetid://10723416527",
-			["key"] = "rbxassetid://10723416652",
-			["keyboard"] = "rbxassetid://10723416765",
-			["lamp"] = "rbxassetid://10723417513",
-			["lampceiling"] = "rbxassetid://10723416922",
-			["lampdesk"] = "rbxassetid://10723417016",
-			["lampfloor"] = "rbxassetid://10723417131",
-			["lampwalldown"] = "rbxassetid://10723417240",
-			["lampwallup"] = "rbxassetid://10723417356",
-			["landmark"] = "rbxassetid://10723417608",
-			["languages"] = "rbxassetid://10723417703",
-			["laptop"] = "rbxassetid://10723423881",
-			["laptop2"] = "rbxassetid://10723417797",
-			["lasso"] = "rbxassetid://10723424235",
-			["lassoselect"] = "rbxassetid://10723424058",
-			["laugh"] = "rbxassetid://10723424372",
-			["layers"] = "rbxassetid://10723424505",
-			["layout"] = "rbxassetid://10723425376",
-			["layoutdashboard"] = "rbxassetid://10723424646",
-			["layoutgrid"] = "rbxassetid://10723424838",
-			["layoutlist"] = "rbxassetid://10723424963",
-			["layouttemplate"] = "rbxassetid://10723425187",
-			["leaf"] = "rbxassetid://10723425539",
-			["library"] = "rbxassetid://10723425615",
-			["lifebuoy"] = "rbxassetid://10723425685",
-			["lightbulb"] = "rbxassetid://10723425852",
-			["lightbulboff"] = "rbxassetid://10723425762",
-			["linechart"] = "rbxassetid://10723426393",
-			["link"] = "rbxassetid://10723426722",
-			["link2"] = "rbxassetid://10723426595",
-			["link2off"] = "rbxassetid://10723426513",
-			["list"] = "rbxassetid://10723433811",
-			["listchecks"] = "rbxassetid://10734884548",
-			["listend"] = "rbxassetid://10723426886",
-			["listminus"] = "rbxassetid://10723426986",
-			["listmusic"] = "rbxassetid://10723427081",
-			["listordered"] = "rbxassetid://10723427199",
-			["listplus"] = "rbxassetid://10723427334",
-			["liststart"] = "rbxassetid://10723427494",
-			["listvideo"] = "rbxassetid://10723427619",
-			["listx"] = "rbxassetid://10723433655",
-			["loader"] = "rbxassetid://10723434070",
-			["loader2"] = "rbxassetid://10723433935",
-			["locate"] = "rbxassetid://10723434557",
-			["locatefixed"] = "rbxassetid://10723434236",
-			["locateoff"] = "rbxassetid://10723434379",
-			["lock"] = "rbxassetid://10723434711",
-			["login"] = "rbxassetid://10723434830",
-			["logout"] = "rbxassetid://10723434906",
-			["luggage"] = "rbxassetid://10723434993",
-			["magnet"] = "rbxassetid://10723435069",
-			["mail"] = "rbxassetid://10734885430",
-			["mailcheck"] = "rbxassetid://10723435182",
-			["mailminus"] = "rbxassetid://10723435261",
-			["mailopen"] = "rbxassetid://10723435342",
-			["mailplus"] = "rbxassetid://10723435443",
-			["mailquestion"] = "rbxassetid://10723435515",
-			["mailsearch"] = "rbxassetid://10734884739",
-			["mailwarning"] = "rbxassetid://10734885015",
-			["mailx"] = "rbxassetid://10734885247",
-			["mails"] = "rbxassetid://10734885614",
-			["map"] = "rbxassetid://10734886202",
-			["mappin"] = "rbxassetid://10734886004",
-			["mappinoff"] = "rbxassetid://10734885803",
-			["maximize"] = "rbxassetid://10734886735",
-			["maximize2"] = "rbxassetid://10734886496",
-			["medal"] = "rbxassetid://10734887072",
-			["megaphone"] = "rbxassetid://10734887454",
-			["megaphoneoff"] = "rbxassetid://10734887311",
-			["meh"] = "rbxassetid://10734887603",
-			["menu"] = "rbxassetid://10734887784",
-			["messagecircle"] = "rbxassetid://10734888000",
-			["messagesquare"] = "rbxassetid://10734888228",
-			["mic"] = "rbxassetid://10734888864",
-			["mic2"] = "rbxassetid://10734888430",
-			["micoff"] = "rbxassetid://10734888646",
-			["microscope"] = "rbxassetid://10734889106",
-			["microwave"] = "rbxassetid://10734895076",
-			["milestone"] = "rbxassetid://10734895310",
-			["minimize"] = "rbxassetid://10734895698",
-			["minimize2"] = "rbxassetid://10734895530",
-			["minus"] = "rbxassetid://10734896206",
-			["minuscircle"] = "rbxassetid://10734895856",
-			["minussquare"] = "rbxassetid://10734896029",
-			["monitor"] = "rbxassetid://10734896881",
-			["monitoroff"] = "rbxassetid://10734896360",
-			["monitorspeaker"] = "rbxassetid://10734896512",
-			["moon"] = "rbxassetid://10734897102",
-			["morehorizontal"] = "rbxassetid://10734897250",
-			["morevertical"] = "rbxassetid://10734897387",
-			["mountain"] = "rbxassetid://10734897956",
-			["mountainsnow"] = "rbxassetid://10734897665",
-			["mouse"] = "rbxassetid://10734898592",
-			["mousepointer"] = "rbxassetid://10734898476",
-			["mousepointer2"] = "rbxassetid://10734898194",
-			["mousepointerclick"] = "rbxassetid://10734898355",
-			["move"] = "rbxassetid://10734900011",
-			["move3d"] = "rbxassetid://10734898756",
-			["movediagonal"] = "rbxassetid://10734899164",
-			["movediagonal2"] = "rbxassetid://10734898934",
-			["movehorizontal"] = "rbxassetid://10734899414",
-			["movevertical"] = "rbxassetid://10734899821",
-			["music"] = "rbxassetid://10734905958",
-			["music2"] = "rbxassetid://10734900215",
-			["music3"] = "rbxassetid://10734905665",
-			["music4"] = "rbxassetid://10734905823",
-			["navigation"] = "rbxassetid://10734906744",
-			["navigation2"] = "rbxassetid://10734906332",
-			["navigation2off"] = "rbxassetid://10734906144",
-			["navigationoff"] = "rbxassetid://10734906580",
-			["network"] = "rbxassetid://10734906975",
-			["newspaper"] = "rbxassetid://10734907168",
-			["octagon"] = "rbxassetid://10734907361",
-			["option"] = "rbxassetid://10734907649",
-			["outdent"] = "rbxassetid://10734907933",
-			["package"] = "rbxassetid://10734909540",
-			["package2"] = "rbxassetid://10734908151",
-			["packagecheck"] = "rbxassetid://10734908384",
-			["packageminus"] = "rbxassetid://10734908626",
-			["packageopen"] = "rbxassetid://10734908793",
-			["packageplus"] = "rbxassetid://10734909016",
-			["packagesearch"] = "rbxassetid://10734909196",
-			["packagex"] = "rbxassetid://10734909375",
-			["paintbucket"] = "rbxassetid://10734909847",
-			["paintbrush"] = "rbxassetid://10734910187",
-			["paintbrush2"] = "rbxassetid://10734910030",
-			["palette"] = "rbxassetid://10734910430",
-			["palmtree"] = "rbxassetid://10734910680",
-			["paperclip"] = "rbxassetid://10734910927",
-			["partypopper"] = "rbxassetid://10734918735",
-			["pause"] = "rbxassetid://10734919336",
-			["pausecircle"] = "rbxassetid://10735024209",
-			["pauseoctagon"] = "rbxassetid://10734919143",
-			["pentool"] = "rbxassetid://10734919503",
-			["pencil"] = "rbxassetid://10734919691",
-			["percent"] = "rbxassetid://10734919919",
-			["personstanding"] = "rbxassetid://10734920149",
-			["phone"] = "rbxassetid://10734921524",
-			["phonecall"] = "rbxassetid://10734920305",
-			["phoneforwarded"] = "rbxassetid://10734920508",
-			["phoneincoming"] = "rbxassetid://10734920694",
-			["phonemissed"] = "rbxassetid://10734920845",
-			["phoneoff"] = "rbxassetid://10734921077",
-			["phoneoutgoing"] = "rbxassetid://10734921288",
-			["piechart"] = "rbxassetid://10734921727",
-			["piggybank"] = "rbxassetid://10734921935",
-			["pin"] = "rbxassetid://10734922324",
-			["pinoff"] = "rbxassetid://10734922180",
-			["pipette"] = "rbxassetid://10734922497",
-			["pizza"] = "rbxassetid://10734922774",
-			["plane"] = "rbxassetid://10734922971",
-			["play"] = "rbxassetid://10734923549",
-			["playcircle"] = "rbxassetid://10734923214",
-			["plus"] = "rbxassetid://10734924532",
-			["pluscircle"] = "rbxassetid://10734923868",
-			["plussquare"] = "rbxassetid://10734924219",
-			["podcast"] = "rbxassetid://10734929553",
-			["pointer"] = "rbxassetid://10734929723",
-			["poundsterling"] = "rbxassetid://10734929981",
-			["power"] = "rbxassetid://10734930466",
-			["poweroff"] = "rbxassetid://10734930257",
-			["printer"] = "rbxassetid://10734930632",
-			["puzzle"] = "rbxassetid://10734930886",
-			["quote"] = "rbxassetid://10734931234",
-			["radio"] = "rbxassetid://10734931596",
-			["radioreceiver"] = "rbxassetid://10734931402",
-			["rectanglehorizontal"] = "rbxassetid://10734931777",
-			["rectanglevertical"] = "rbxassetid://10734932081",
-			["recycle"] = "rbxassetid://10734932295",
-			["redo"] = "rbxassetid://10734932822",
-			["redo2"] = "rbxassetid://10734932586",
-			["refreshccw"] = "rbxassetid://10734933056",
-			["refreshcw"] = "rbxassetid://10734933222",
-			["refrigerator"] = "rbxassetid://10734933465",
-			["regex"] = "rbxassetid://10734933655",
-			["repeat"] = "rbxassetid://10734933966",
-			["repeat1"] = "rbxassetid://10734933826",
-			["reply"] = "rbxassetid://10734934252",
-			["replyall"] = "rbxassetid://10734934132",
-			["rewind"] = "rbxassetid://10734934347",
-			["rocket"] = "rbxassetid://10734934585",
-			["rockingchair"] = "rbxassetid://10734939942",
-			["rotate3d"] = "rbxassetid://10734940107",
-			["rotateccw"] = "rbxassetid://10734940376",
-			["rotatecw"] = "rbxassetid://10734940654",
-			["rss"] = "rbxassetid://10734940825",
-			["ruler"] = "rbxassetid://10734941018",
-			["russianruble"] = "rbxassetid://10734941199",
-			["sailboat"] = "rbxassetid://10734941354",
-			["save"] = "rbxassetid://10734941499",
-			["scale"] = "rbxassetid://10734941912",
-			["scale3d"] = "rbxassetid://10734941739",
-			["scaling"] = "rbxassetid://10734942072",
-			["scan"] = "rbxassetid://10734942565",
-			["scanface"] = "rbxassetid://10734942198",
-			["scanline"] = "rbxassetid://10734942351",
-			["scissors"] = "rbxassetid://10734942778",
-			["screenshare"] = "rbxassetid://10734943193",
-			["screenshareoff"] = "rbxassetid://10734942967",
-			["scroll"] = "rbxassetid://10734943448",
-			["search"] = "rbxassetid://10734943674",
-			["send"] = "rbxassetid://10734943902",
-			["separatorhorizontal"] = "rbxassetid://10734944115",
-			["separatorvertical"] = "rbxassetid://10734944326",
-			["server"] = "rbxassetid://10734949856",
-			["servercog"] = "rbxassetid://10734944444",
-			["servercrash"] = "rbxassetid://10734944554",
-			["serveroff"] = "rbxassetid://10734944668",
-			["settings"] = "rbxassetid://10734950309",
-			["settings2"] = "rbxassetid://10734950020",
-			["share"] = "rbxassetid://10734950813",
-			["share2"] = "rbxassetid://10734950553",
-			["sheet"] = "rbxassetid://10734951038",
-			["shield"] = "rbxassetid://10734951847",
-			["shieldalert"] = "rbxassetid://10734951173",
-			["shieldcheck"] = "rbxassetid://10734951367",
-			["shieldclose"] = "rbxassetid://10734951535",
-			["shieldoff"] = "rbxassetid://10734951684",
-			["shirt"] = "rbxassetid://10734952036",
-			["shoppingbag"] = "rbxassetid://10734952273",
-			["shoppingcart"] = "rbxassetid://10734952479",
-			["shovel"] = "rbxassetid://10734952773",
-			["showerhead"] = "rbxassetid://10734952942",
-			["shrink"] = "rbxassetid://10734953073",
-			["shrub"] = "rbxassetid://10734953241",
-			["shuffle"] = "rbxassetid://10734953451",
-			["sidebar"] = "rbxassetid://10734954301",
-			["sidebarclose"] = "rbxassetid://10734953715",
-			["sidebaropen"] = "rbxassetid://10734954000",
-			["sigma"] = "rbxassetid://10734954538",
-			["signal"] = "rbxassetid://10734961133",
-			["signalhigh"] = "rbxassetid://10734954807",
-			["signallow"] = "rbxassetid://10734955080",
-			["signalmedium"] = "rbxassetid://10734955336",
-			["signalzero"] = "rbxassetid://10734960878",
-			["siren"] = "rbxassetid://10734961284",
-			["skipback"] = "rbxassetid://10734961526",
-			["skipforward"] = "rbxassetid://10734961809",
-			["skull"] = "rbxassetid://10734962068",
-			["slack"] = "rbxassetid://10734962339",
-			["slash"] = "rbxassetid://10734962600",
-			["slice"] = "rbxassetid://10734963024",
-			["sliders"] = "rbxassetid://10734963400",
-			["slidershorizontal"] = "rbxassetid://10734963191",
-			["smartphone"] = "rbxassetid://10734963940",
-			["smartphonecharging"] = "rbxassetid://10734963671",
-			["smile"] = "rbxassetid://10734964441",
-			["smileplus"] = "rbxassetid://10734964188",
-			["snowflake"] = "rbxassetid://10734964600",
-			["sofa"] = "rbxassetid://10734964852",
-			["sortasc"] = "rbxassetid://10734965115",
-			["sortdesc"] = "rbxassetid://10734965287",
-			["speaker"] = "rbxassetid://10734965419",
-			["sprout"] = "rbxassetid://10734965572",
-			["square"] = "rbxassetid://10734965702",
-			["star"] = "rbxassetid://10734966248",
-			["starhalf"] = "rbxassetid://10734965897",
-			["staroff"] = "rbxassetid://10734966097",
-			["stethoscope"] = "rbxassetid://10734966384",
-			["sticker"] = "rbxassetid://10734972234",
-			["stickynote"] = "rbxassetid://10734972463",
-			["stopcircle"] = "rbxassetid://10734972621",
-			["stretchhorizontal"] = "rbxassetid://10734972862",
-			["stretchvertical"] = "rbxassetid://10734973130",
-			["strikethrough"] = "rbxassetid://10734973290",
-			["subscript"] = "rbxassetid://10734973457",
-			["sun"] = "rbxassetid://10734974297",
-			["sundim"] = "rbxassetid://10734973645",
-			["sunmedium"] = "rbxassetid://10734973778",
-			["sunmoon"] = "rbxassetid://10734973999",
-			["sunsnow"] = "rbxassetid://10734974130",
-			["sunrise"] = "rbxassetid://10734974522",
-			["sunset"] = "rbxassetid://10734974689",
-			["superscript"] = "rbxassetid://10734974850",
-			["swissfranc"] = "rbxassetid://10734975024",
-			["switchcamera"] = "rbxassetid://10734975214",
-			["sword"] = "rbxassetid://10734975486",
-			["swords"] = "rbxassetid://10734975692",
-			["syringe"] = "rbxassetid://10734975932",
-			["table"] = "rbxassetid://10734976230",
-			["table2"] = "rbxassetid://10734976097",
-			["tablet"] = "rbxassetid://10734976394",
-			["tag"] = "rbxassetid://10734976528",
-			["tags"] = "rbxassetid://10734976739",
-			["target"] = "rbxassetid://10734977012",
-			["tent"] = "rbxassetid://10734981750",
-			["terminal"] = "rbxassetid://10734982144",
-			["terminalsquare"] = "rbxassetid://10734981995",
-			["textcursor"] = "rbxassetid://10734982395",
-			["textcursorinput"] = "rbxassetid://10734982297",
-			["thermometer"] = "rbxassetid://10734983134",
-			["thermometersnowflake"] = "rbxassetid://10734982571",
-			["thermometersun"] = "rbxassetid://10734982771",
-			["thumbsdown"] = "rbxassetid://10734983359",
-			["thumbsup"] = "rbxassetid://10734983629",
-			["ticket"] = "rbxassetid://10734983868",
-			["timer"] = "rbxassetid://10734984606",
-			["timeroff"] = "rbxassetid://10734984138",
-			["timerreset"] = "rbxassetid://10734984355",
-			["toggleleft"] = "rbxassetid://10734984834",
-			["toggleright"] = "rbxassetid://10734985040",
-			["tornado"] = "rbxassetid://10734985247",
-			["toybrick"] = "rbxassetid://10747361919",
-			["train"] = "rbxassetid://10747362105",
-			["trash"] = "rbxassetid://10747362393",
-			["trash2"] = "rbxassetid://10747362241",
-			["treedeciduous"] = "rbxassetid://10747362534",
-			["treepine"] = "rbxassetid://10747362748",
-			["trees"] = "rbxassetid://10747363016",
-			["trendingdown"] = "rbxassetid://10747363205",
-			["trendingup"] = "rbxassetid://10747363465",
-			["triangle"] = "rbxassetid://10747363621",
-			["trophy"] = "rbxassetid://10747363809",
-			["truck"] = "rbxassetid://10747364031",
-			["tv"] = "rbxassetid://10747364593",
-			["tv2"] = "rbxassetid://10747364302",
-			["type"] = "rbxassetid://10747364761",
-			["umbrella"] = "rbxassetid://10747364971",
-			["underline"] = "rbxassetid://10747365191",
-			["undo"] = "rbxassetid://10747365484",
-			["undo2"] = "rbxassetid://10747365359",
-			["unlink"] = "rbxassetid://10747365771",
-			["unlink2"] = "rbxassetid://10747397871",
-			["unlock"] = "rbxassetid://10747366027",
-			["upload"] = "rbxassetid://10747366434",
-			["uploadcloud"] = "rbxassetid://10747366266",
-			["usb"] = "rbxassetid://10747366606",
-			["user"] = "rbxassetid://10747373176",
-			["usercheck"] = "rbxassetid://10747371901",
-			["usercog"] = "rbxassetid://10747372167",
-			["userminus"] = "rbxassetid://10747372346",
-			["userplus"] = "rbxassetid://10747372702",
-			["userx"] = "rbxassetid://10747372992",
-			["users"] = "rbxassetid://10747373426",
-			["utensils"] = "rbxassetid://10747373821",
-			["utensilscrossed"] = "rbxassetid://10747373629",
-			["venetianmask"] = "rbxassetid://10747374003",
-			["verified"] = "rbxassetid://10747374131",
-			["vibrate"] = "rbxassetid://10747374489",
-			["vibrateoff"] = "rbxassetid://10747374269",
-			["video"] = "rbxassetid://10747374938",
-			["videooff"] = "rbxassetid://10747374721",
-			["view"] = "rbxassetid://10747375132",
-			["voicemail"] = "rbxassetid://10747375281",
-			["volume"] = "rbxassetid://10747376008",
-			["volume1"] = "rbxassetid://10747375450",
-			["volume2"] = "rbxassetid://10747375679",
-			["volumex"] = "rbxassetid://10747375880",
-			["wallet"] = "rbxassetid://10747376205",
-			["wand"] = "rbxassetid://10747376565",
-			["wand2"] = "rbxassetid://10747376349",
-			["watch"] = "rbxassetid://10747376722",
-			["waves"] = "rbxassetid://10747376931",
-			["webcam"] = "rbxassetid://10747381992",
-			["wifi"] = "rbxassetid://10747382504",
-			["wifioff"] = "rbxassetid://10747382268",
-			["wind"] = "rbxassetid://10747382750",
-			["wraptext"] = "rbxassetid://10747383065",
-			["wrench"] = "rbxassetid://10747383470",
-			["x"] = "rbxassetid://10747384394",
-			["xcircle"] = "rbxassetid://10747383819",
-			["xoctagon"] = "rbxassetid://10747384037",
-			["xsquare"] = "rbxassetid://10747384217",
-			["zoomin"] = "rbxassetid://10747384552",
-			["zoomout"] = "rbxassetid://10747384679"
-		}
-	end)()
+	buttonPositions = {Character = UDim2.new(0.5, -155, 1, -29), Scripts = UDim2.new(0.5, -122, 1, -29), Playerlist = UDim2.new(0.5, -68, 1, -29)},
+	chatSpy = {
+		enabled = true,
+		visual = {
+			Color = Color3.fromRGB(26, 148, 255),
+			Font = Enum.Font.SourceSansBold,
+			TextSize = 18
+		},
+	},
+	pingProfile = {
+		recentPings = {},
+		adaptiveBaselinePings = {},
+		pingNotificationCooldown = 0,
+		maxSamples = 12, -- max num of recent pings stored
+		spikeThreshold = 1.75, -- high Ping in comparison to average ping (e.g 100 avg would be high at 150)
+		adaptiveBaselineSamples = 30, -- how many samples Sirius takes before deciding on a fixed high ping value
+		adaptiveHighPingThreshold = 120 -- default value
+	},
+	frameProfile = {
+		frameNotificationCooldown = 0,
+		fpsQueueSize = 10,
+		lowFPSThreshold = 20, -- what's low fps!??!?!
+		totalFPS = 0,
+		fpsQueue = {},
+	},
+	actions = {
+		{
+			name = "Noclip",
+			images = {14385986465, 9134787693},
+			color = Color3.fromRGB(0, 170, 127),
+			enabled = false,
+			rotateWhileEnabled = false,
+			callback = function() end,
+		},
+		{
+			name = "Flight",
+			images = {9134755504, 14385992605},
+			color = Color3.fromRGB(170, 37, 46),
+			enabled = false,
+			rotateWhileEnabled = false,
+			callback = function(value)
+				local character = localPlayer.Character
+				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+				if humanoid then
+					humanoid.PlatformStand = value
+				end
+			end,
+		},
+		{
+			name = "Refresh",
+			images = {9134761478, 9134761478},
+			color = Color3.fromRGB(61, 179, 98),
+			enabled = false,
+			rotateWhileEnabled = true,
+			disableAfter = 3,
+			callback = function()
+				task.spawn(function()
+					local character = localPlayer.Character
+					if character then
+						local cframe = character:GetPivot()
+						local humanoid = character:FindFirstChildOfClass("Humanoid")
+						if humanoid then
+							humanoid:ChangeState(Enum.HumanoidStateType.Dead)
+						end
+						character = localPlayer.CharacterAdded:Wait()
+						task.defer(character.PivotTo, character, cframe)
+					end
+				end)
+			end,
+		},
+		{
+			name = "Respawn",
+			images = {9134762943, 9134762943},
+			color = Color3.fromRGB(49, 88, 193),
+			enabled = false,
+			rotateWhileEnabled = true,
+			disableAfter = 2,
+			callback = function()
+				local character = localPlayer.Character
+				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+				if humanoid then
+					humanoid:ChangeState(Enum.HumanoidStateType.Dead)
+				end
+			end,
+		},
+		{
+			name = "Invulnerability",
+			images = {9134765994, 14386216487},
+			color = Color3.fromRGB(193, 46, 90),
+			enabled = false,
+			rotateWhileEnabled = false,
+			callback = function() end,
+		},
+		{
+			name = "Fling",
+			images = {9134785384, 14386226155},
+			color = Color3.fromRGB(184, 85, 61),
+			enabled = false,
+			rotateWhileEnabled = true,
+			callback = function(value)
+				local character = localPlayer.Character
+				local primaryPart = character and character.PrimaryPart
+				if primaryPart then
+					for _, part in ipairs(character:GetDescendants()) do
+						if part:IsA("BasePart") then
+							part.Massless = value
+							part.CustomPhysicalProperties = PhysicalProperties.new(value and math.huge or 0.7, 0.3, 0.5)
+						end
+					end
+
+					primaryPart.Anchored = true
+					primaryPart.AssemblyLinearVelocity = Vector3.zero
+					primaryPart.AssemblyAngularVelocity = Vector3.zero
+
+					movers[3].Parent = value and primaryPart or nil
+
+					task.delay(0.5, function() primaryPart.Anchored = false end)
+				end
+			end,
+		},
+		{
+			name = "Extrasensory Perception",
+			images = {9134780101, 14386232387},
+			color = Color3.fromRGB(214, 182, 19),
+			enabled = false,
+			rotateWhileEnabled = false,
+			callback = function(value)
+				for _, highlight in ipairs(espContainer:GetChildren()) do
+					highlight.Enabled = value
+				end
+			end,
+		},
+		{
+			name = "Night and Day",
+			images = {9134778004, 10137794784},
+			color = Color3.fromRGB(102, 75, 190),
+			enabled = false,
+			rotateWhileEnabled = false,
+			callback = function(value)
+				tweenService:Create(lighting, TweenInfo.new(0.5), { ClockTime = value and 12 or 24 }):Play()
+			end,
+		},
+		{
+			name = "Global Audio",
+			images = {9134774810, 14386246782},
+			color = Color3.fromRGB(202, 103, 58),
+			enabled = false,
+			rotateWhileEnabled = false,
+			callback = function(value)
+				if value then
+					oldVolume = gameSettings.MasterVolume
+					gameSettings.MasterVolume = 0
+				else
+					gameSettings.MasterVolume = oldVolume
+				end
+			end,
+		},
+		{
+			name = "Visibility",
+			images = {14386256326, 9134770786},
+			color = Color3.fromRGB(62, 94, 170),
+			enabled = false,
+			rotateWhileEnabled = false,
+			callback = function() end,
+		},
+	},
+	sliders = {
+		{
+			name = "player speed",
+			color = Color3.fromRGB(44, 153, 93),
+			values = {0, 300},
+			default = 16,
+			value = 16,
+			active = false,
+			callback = function(value)
+				local character = localPlayer.Character
+				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+				if character then
+					humanoid.WalkSpeed = value
+				end
+			end,
+		},
+		{
+			name = "jump power",
+			color = Color3.fromRGB(59, 126, 184),
+			values = {0, 350},
+			default = 50,
+			value = 16,
+			active = false,
+			callback = function(value)
+				local character = localPlayer.Character
+				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+				if character then
+					if humanoid.UseJumpPower then
+						humanoid.JumpPower = value
+					else
+						humanoid.JumpHeight = value
+					end
+				end
+			end,
+		},
+		{
+			name = "flight speed",
+			color = Color3.fromRGB(177, 45, 45),
+			values = {1, 25},
+			default = 3,
+			value = 3,
+			active = false,
+			callback = function(value) end,
+		},
+		{
+			name = "field of view",
+			color = Color3.fromRGB(198, 178, 75),
+			values = {45, 120},
+			default = 70,
+			value = 16,
+			active = false,
+			callback = function(value)
+				tweenService:Create(camera, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), { FieldOfView = value }):Play()
+			end,
+		},
+	}
 }
 
-local ViewportSize = workspace:WaitForChild("Camera").ViewportSize
-local UIScale = ViewportSize.Y / 450
+local siriusSettings = {
+	{
+		name = 'General',
+		description = 'The general settings for Sirius, from simple to unique features.',
+		color = Color3.new(0.117647, 0.490196, 0.72549),
+		minimumLicense = 'Free',
+		categorySettings = {
+			{
+				name = 'Anonymous Client',
+				description = 'Randomise your username in real-time in any CoreGui parented interface, including Sirius. You will still appear as your actual name to others in-game. This setting can be performance intensive.',
+				settingType = 'Boolean',
+				current = false,
 
-local Settings = redzlib.Settings
-local Flags = redzlib.Flags
+				id = 'anonmode'
+			},
+			{
+				name = 'Chat Spy',
+				description = 'This will only work on the legacy Roblox chat system. Sirius will display whispers usually hidden from you in the chat box.',
+				settingType = 'Boolean',
+				current = true,
 
-local SetProps, SetChildren, InsertTheme, Create do
-	InsertTheme = function(Instance, Type)
-		table.insert(redzlib.Instances, {
-			Instance = Instance,
-			Type = Type
-		})
-		return Instance
-	end
-	
-	SetChildren = function(Instance, Children)
-		if Children then
-			for _, Child in pairs(Children) do
-				Child.Parent = Instance
-			end
-		end
-		return Instance
-	end
-	
-	SetProps = function(Instance, Props)
-		if Props then
-			for prop, value in pairs(Props) do
-				Instance[prop] = value
-			end
-		end
-		return Instance
-	end
-	
-	Create = function(...)
-		local args = {...}
-				local new = Instance.new(args[1])
+				id = 'chatspy'
+			},
+			{
+				name = 'Hide Toggle Button',
+				description = 'This will remove the option to open the smartBar with the toggle button.',
+				settingType = 'Boolean',
+				current = false,
 
--- AUTO-INJECT: Add subtle UICorner and hover (no strokes)
-pcall(function()
-    if new and typeof(new) == "Instance" then
-        if new:IsA("Frame") or new:IsA("TextButton") or new:IsA("TextLabel") or new:IsA("ScrollingFrame") or new:IsA("ImageButton") then
-            local __corner = Instance.new("UICorner")
-            __corner.CornerRadius = UDim.new(0, 6) -- slightly rounded
-            __corner.Parent = new
+				id = 'hidetoggle'
+			},
+			{
+				name = 'Now Playing Notifications',
+				description = 'When active, Sirius will notify you when the next song in your Music queue plays.',
+				settingType = 'Boolean',
+				current = true,
 
-            -- Hover animation for buttons (best-effort)
-            if new:IsA("TextButton") or new:IsA("ImageButton") then
-                local ok, orig = pcall(function() return new.BackgroundColor3 end)
-                local originalBG = ok and orig or Color3.fromRGB(65, 150, 255)
-                new.MouseEnter:Connect(function()
-                    pcall(function()
-                        game:GetService('TweenService'):Create(new, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.new(math.min(1, originalBG.R+0.14), math.min(1, originalBG.G+0.14), math.min(1, originalBG.B+0.14)), BackgroundTransparency = math.max(0, (new.BackgroundTransparency or 0) - 0.05)}):Play()
-                    end)
-                end)
-                new.MouseLeave:Connect(function()
-                    pcall(function()
-                        game:GetService('TweenService'):Create(new, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = originalBG, BackgroundTransparency = new.BackgroundTransparency or 0}):Play()
-                    end)
-                end)
-            end
-        end
-    end
-end)
-		local Children = {}
-		
-		if type(args[2]) == "table" then
-			SetProps(new, args[2])
-			SetChildren(new, args[3])
-			Children = args[3] or {}
-		elseif typeof(args[2]) == "Instance" then
-			new.Parent = args[2]
-			SetProps(new, args[3])
-			SetChildren(new, args[4])
-			Children = args[4] or {}
-		end
-		return new
-	end
-	
-	local function Save(file)
-		if readfile and isfile and isfile(file) then
-			local decode = HttpService:JSONDecode(readfile(file))
-			
-			if type(decode) == "table" then
-				if rawget(decode, "UISize") then redzlib.Save["UISize"] = decode["UISize"] end
-				if rawget(decode, "TabSize") then redzlib.Save["TabSize"] = decode["TabSize"] end
-				if rawget(decode, "Theme") and VerifyTheme(decode["Theme"]) then redzlib.Save["Theme"] = decode["Theme"] end
-			end
-		end
-	end
-	
-	pcall(Save, "redz library V5.json")
-end
+				id = 'nowplaying'
+			},
+			{
+				name = 'Friend Notifications',
+				settingType = 'Boolean', 
+				current = true,
 
-local Funcs = {} do
-	function Funcs:InsertCallback(tab, func)
-		if type(func) == "function" then
-			table.insert(tab, func)
-		end
-		return func
-	end
-	
-	function Funcs:FireCallback(tab, ...)
-		for _,v in ipairs(tab) do
-			if type(v) == "function" then
-				task.spawn(v, ...)
-			end
-		end
-	end
-	
-	function Funcs:ToggleVisible(Obj, Bool)
-		Obj.Visible = Bool ~= nil and Bool or Obj.Visible
-	end
-	
-	function Funcs:ToggleParent(Obj, Parent)
-		if Bool ~= nil then
-			Obj.Parent = Bool
-		else
-			Obj.Parent = not Obj.Parent and Parent
-		end
-	end
-	
-	function Funcs:GetConnectionFunctions(ConnectedFuncs, func)
-		local Connected = { Function = func, Connected = true }
-		
-		function Connected:Disconnect()
-			if self.Connected then
-				table.remove(ConnectedFuncs, table.find(ConnectedFuncs, self.Function))
-				self.Connected = false
-			end
-		end
-		
-		function Connected:Fire(...)
-			if self.Connected then
-				task.spawn(self.Function, ...)
-			end
-		end
-		
-		return Connected
-	end
-	
-	function Funcs:GetCallback(Configs, index)
-		local func = Configs[index] or Configs.Callback or function()end
-		
-		if type(func) == "table" then
-			return ({function(Value) func[1][func[2]] = Value end})
-		end
-		return {func}
-	end
-end
+				id = 'friendnotifs'
+			},
+			{
+				name = 'Load Hidden',
+				settingType = 'Boolean',
+				current = false,
 
-local Connections, Connection = {}, redzlib.Connection do
-	local function NewConnectionList(List)
-		if type(List) ~= "table" then return end
-		
-		for _,CoName in ipairs(List) do
-			local ConnectedFuncs, Connect = {}, {}
-			Connection[CoName] = Connect
-			Connections[CoName] = ConnectedFuncs
-			Connect.Name = CoName
-			
-			function Connect:Connect(func)
-				if type(func) == "function" then
-					table.insert(ConnectedFuncs, func)
-					return Funcs:GetConnectionFunctions(ConnectedFuncs, func)
+				id = 'loadhidden'
+			}, 
+			{
+				name = 'Startup Sound Effect',
+				settingType = 'Boolean',
+				current = true,
+
+				id = 'startupsound'
+			}, 
+			{
+				name = 'Anti Idle',
+				description = 'Remove all callbacks and events linked to the LocalPlayer Idled state. This may prompt detection from Adonis or similar anti-cheats.',
+				settingType = 'Boolean',
+				current = true,
+
+				id = 'antiidle'
+			},
+			{
+				name = 'Client-Based Anti Kick',
+				description = 'Cancel any kick request involving you sent by the client. This may prompt detection from Adonis or similar anti-cheats. You will need to rejoin and re-run Sirius to toggle.',
+				settingType = 'Boolean',
+				current = false,
+
+				id = 'antikick'
+			},
+			{
+				name = 'Muffle audio while unfocused',
+				settingType = 'Boolean', 
+				current = true,
+
+				id = 'muffleunfocused'
+			},
+		}
+	},
+	{
+		name = 'Keybinds',
+		description = 'Assign keybinds to actions or change keybinds such as the one to open/close Sirius.',
+		color = Color3.new(0.0941176, 0.686275, 0.509804),
+		minimumLicense = 'Free',
+		categorySettings = {
+			{
+				name = 'Toggle smartBar',
+				settingType = 'Key',
+				current = "K",
+				id = 'smartbar'
+			},
+			{
+				name = 'Open ScriptSearch',
+				settingType = 'Key',
+				current = "T",
+				id = 'scriptsearch'
+			},
+			{
+				name = 'NoClip',
+				settingType = 'Key',
+				current = nil,
+				id = 'noclip',
+				callback = function()
+					local noclip = siriusValues.actions[1]
+					noclip.enabled = not noclip.enabled
+					noclip.callback(noclip.enabled)
 				end
-			end
-			
-			function Connect:Once(func)
-				if type(func) == "function" then
-					local Connected;
-					
-					local _NFunc;_NFunc = function(...)
-						task.spawn(func, ...)
-						Connected:Disconnect()
+			},
+			{
+				name = 'Flight',
+				settingType = 'Key',
+				current = nil,
+				id = 'flight',
+				callback = function()
+					local flight = siriusValues.actions[2]
+					flight.enabled = not flight.enabled
+					flight.callback(flight.enabled)
+				end
+			},
+			{
+				name = 'Refresh',
+				settingType = 'Key',
+				current = nil,
+				id = 'refresh',
+				callback = function()
+					local refresh = siriusValues.actions[3]
+					if not refresh.enabled then
+						refresh.enabled = true
+						refresh.callback()
 					end
-					
-					Connected = Funcs:GetConnectionFunctions(ConnectedFuncs, _NFunc)
-					return Connected
+				end
+			},
+			{
+				name = 'Respawn',
+				settingType = 'Key',
+				current = nil,
+				id = 'respawn',
+				callback = function()
+					local respawn = siriusValues.actions[4]
+					if not respawn.enabled then
+						respawn.enabled = true
+						respawn.callback()
+					end
+				end
+			},
+			{
+				name = 'Invulnerability',
+				settingType = 'Key',
+				current = nil,
+				id = 'invulnerability',
+				callback = function()
+					local invulnerability = siriusValues.actions[5]
+					invulnerability.enabled = not invulnerability.enabled
+					invulnerability.callback(invulnerability.enabled)
+				end
+			},
+			{
+				name = 'Fling',
+				settingType = 'Key',
+				current = nil,
+				id = 'fling',
+				callback = function()
+					local fling = siriusValues.actions[6]
+					fling.enabled = not fling.enabled
+					fling.callback(fling.enabled)
+				end
+			},
+			{
+				name = 'ESP',
+				settingType = 'Key',
+				current = nil,
+				id = 'esp',
+				callback = function()
+					local esp = siriusValues.actions[7]
+					esp.enabled = not esp.enabled
+					esp.callback(esp.enabled)
+				end
+			},
+			{
+				name = 'Night and Day',
+				settingType = 'Key',
+				current = nil,
+				id = 'nightandday',
+				callback = function()
+					local nightandday = siriusValues.actions[8]
+					nightandday.enabled = not nightandday.enabled
+					nightandday.callback(nightandday.enabled)
+				end
+			},
+			{
+				name = 'Global Audio',
+				settingType = 'Key',
+				current = nil,
+				id = 'globalaudio',
+				callback = function()
+					local globalaudio = siriusValues.actions[9]
+					globalaudio.enabled = not globalaudio.enabled
+					globalaudio.callback(globalaudio.enabled)
+				end
+			},
+			{
+				name = 'Visibility',
+				settingType = 'Key',
+				current = nil,
+				id = 'visibility',
+				callback = function()
+					local visibility = siriusValues.actions[10]
+					visibility.enabled = not visibility.enabled
+					visibility.callback(visibility.enabled)
+				end
+			},
+		}
+	},
+	{
+		name = 'Performance',
+		description = 'Tweak and test your performance settings for Roblox in Sirius.',
+		color = Color3.new(1, 0.376471, 0.168627),
+		minimumLicense = 'Free',
+		categorySettings = {
+			{
+				name = 'Artificial FPS Limit',
+				description = 'Sirius will automatically set your FPS to this number when you are tabbed-in to Roblox.',
+				settingType = 'Number',
+				values = {20, 5000},
+				current = 240,
+
+				id = 'fpscap'
+			},
+			{
+				name = 'Limit FPS while unfocused',
+				description = 'Sirius will automatically set your FPS to 60 when you tab-out or unfocus from Roblox.',
+				settingType = 'Boolean', -- number for the cap below!! with min and max val
+				current = true,
+
+				id = 'fpsunfocused'
+			},
+			{
+				name = 'Adaptive Latency Warning',
+				description = 'Sirius will check your average latency in the background and notify you if your current latency significantly goes above your average latency.',
+				settingType = 'Boolean',
+				current = true,
+
+				id = 'latencynotif'
+			},
+			{
+				name = 'Adaptive Performance Warning',
+				description = 'Sirius will check your average FPS in the background and notify you if your current FPS goes below a specific number.',
+				settingType = 'Boolean',
+				current = true,
+
+				id = 'fpsnotif'
+			},
+		}
+	},
+	{
+		name = 'Detections',
+		description = 'Sirius detects and prevents anything malicious or possibly harmful to your wellbeing.',
+		color = Color3.new(0.705882, 0, 0),
+		minimumLicense = 'Free',
+		categorySettings = {
+			{
+				name = 'Spatial Shield',
+				description = 'Suppress loud sounds played from any audio source in-game, in real-time with Spatial Shield.',
+				settingType = 'Boolean',
+				minimumLicense = 'Pro',
+				current = true,
+
+				id = 'spatialshield'
+			},
+			{
+				name = 'Spatial Shield Threshold',
+				description = 'How loud a sound needs to be to be suppressed.',
+				settingType = 'Number',
+				minimumLicense = 'Pro',
+				values = {100, 1000},
+				current = 300,
+
+				id = 'spatialshieldthreshold'
+			},
+			{
+				name = 'Moderator Detection',
+				description = 'Be notified whenever Sirius detects a player joins your session that could be a game moderator.',
+				settingType = 'Boolean', 
+				minimumLicense = 'Pro',
+				current = true,
+
+				id = 'moddetection'
+			},
+			{
+				name = 'Intelligent HTTP Interception',
+				description = 'Block external HTTP/HTTPS requests from being sent/recieved and ask you before allowing it to run.',
+				settingType = 'Boolean',
+				minimumLicense = 'Essential',
+				current = true,
+
+				id = 'intflowintercept'
+			},
+			{
+				name = 'Intelligent Clipboard Interception',
+				description = 'Block your clipboard from being set and ask you before allowing it to set your clipboard.',
+				settingType = 'Boolean',
+				minimumLicense = 'Essential',
+				current = true,
+
+				id = 'intflowinterceptclip'
+			},
+		},
+	},
+	{
+		name = 'Logging',
+		description = 'Send logs to your specified webhook URL of things like player joins and leaves and messages.',
+		color = Color3.new(0.905882, 0.780392, 0.0666667),
+		minimumLicense = 'Free',
+		categorySettings = {
+			{
+				name = 'Log Messages',
+				description = 'Log messages sent by any player to your webhook.',
+				settingType = 'Boolean',
+				current = false,
+
+				id = 'logmsg'
+			},
+			{
+				name = 'Message Webhook URL',
+				description = 'Discord Webhook URL',
+				settingType = 'Input',
+				current = 'No Webhook',
+
+				id = 'logmsgurl'
+			},
+			{
+				name = 'Log PlayerAdded and PlayerRemoving',
+				description = 'Log whenever any player leaves or joins your session.',
+				settingType = 'Boolean',
+				current = false,
+
+				id = 'logplrjoinleave'
+			},
+			{
+				name = 'Player Added and Removing Webhook URL',
+				description = 'Discord Webhook URL',
+				settingType = 'Input',
+				current = 'No Webhook',
+
+				id = 'logplrjoinleaveurl'
+			},
+		}
+	},
+}
+
+-- Generate random username
+local randomAdjective = siriusValues.nameGeneration.adjectives[math.random(1, #siriusValues.nameGeneration.adjectives)]
+local randomNoun = siriusValues.nameGeneration.nouns[math.random(1, #siriusValues.nameGeneration.nouns)]
+local randomNumber = math.random(100, 3999) -- You can customize the range
+local randomUsername = randomAdjective .. randomNoun .. randomNumber
+
+-- Initialise Sirius Client Interface
+local guiParent = gethui and gethui() or coreGui
+local sirius = guiParent:FindFirstChild("Sirius")
+if sirius then
+	sirius:Destroy()
+end
+
+local UI = game:GetObjects('rbxassetid://'..siriusValues.interfaceAsset)[1]
+UI.Name = siriusValues.siriusName
+UI.Parent = guiParent
+UI.Enabled = false
+
+-- Create Variables for Interface Elements
+local characterPanel = UI.Character
+local customScriptPrompt = UI.CustomScriptPrompt
+local securityPrompt = UI.SecurityPrompt
+local disconnectedPrompt = UI.Disconnected
+local gameDetectionPrompt = UI.GameDetection
+local homeContainer = UI.Home
+local moderatorDetectionPrompt = UI.ModeratorDetectionPrompt
+local musicPanel = UI.Music
+local notificationContainer = UI.Notifications
+local playerlistPanel = UI.Playerlist
+local scriptSearch = UI.ScriptSearch
+local scriptsPanel = UI.Scripts
+local settingsPanel = UI.Settings
+local smartBar = UI.SmartBar
+local toggle = UI.Toggle
+local starlight = UI.Starlight
+local toastsContainer = UI.Toasts
+
+-- Interface Caching
+if not getgenv().cachedInGameUI then getgenv().cachedInGameUI = {} end
+if not getgenv().cachedCoreUI then getgenv().cachedCoreUI = {} end
+
+-- Malicious Behavior Prevention
+local indexSetClipboard = "setclipboard"
+local originalSetClipboard = getgenv()[indexSetClipboard]
+
+local index = http_request and "http_request" or "request"
+local originalRequest = getgenv()[index]
+
+-- put this into siriusValues, like the fps and ping shit
+local suppressedSounds = {}
+local soundSuppressionNotificationCooldown = 0
+local soundInstances = {}
+local cachedIds = {}
+local cachedText = {}
+
+if not getMessage then siriusValues.chatSpy.enabled = false end
+
+-- Call External Modules
+
+-- httpRequest
+local httpRequest = originalRequest
+
+-- Neon Module
+--local neonModule = (function() -- Open sourced neon module
+--	local module = {}
+--	do
+--		local function IsNotNaN(x)
+--			return x == x
+--		end
+--		local continued = IsNotNaN(camera:ScreenPointToRay(0,0).Origin.x)
+--		while not continued do
+--			runService.RenderStepped:wait()
+--			continued = IsNotNaN(camera:ScreenPointToRay(0,0).Origin.x)
+--		end
+--	end
+
+--	local RootParent = camera
+--	local root
+--	local binds = {}
+
+--	local function getRoot()
+--		if root then 
+--			return root
+--		else
+--			root = Instance.new('Folder', RootParent)
+--			root.Name = 'neon'
+--			return root
+--		end
+--	end
+
+--	local function destroyRoot()
+--		if root then 
+--			root:Destroy()
+--			root = nil
+--		end
+--	end
+
+--	local GenUid; do
+--		local id = 0
+--		function GenUid()
+--			id = id + 1
+--			return 'neon::'..tostring(id)
+--		end
+--	end
+
+--	local DrawQuad; do
+--		local acos, max, pi, sqrt = math.acos, math.max, math.pi, math.sqrt
+--		local sz = 0.2
+
+--		local function DrawTriangle(v1, v2, v3, p0, p1)
+--			local s1 = (v1 - v2).magnitude
+--			local s2 = (v2 - v3).magnitude
+--			local s3 = (v3 - v1).magnitude
+--			local smax = max(s1, s2, s3)
+--			local A, B, C
+--			if s1 == smax then
+--				A, B, C = v1, v2, v3
+--			elseif s2 == smax then
+--				A, B, C = v2, v3, v1
+--			elseif s3 == smax then
+--				A, B, C = v3, v1, v2
+--			end
+
+--			local para = ( (B-A).x*(C-A).x + (B-A).y*(C-A).y + (B-A).z*(C-A).z ) / (A-B).magnitude
+--			local perp = sqrt((C-A).magnitude^2 - para*para)
+--			local dif_para = (A - B).magnitude - para
+
+--			local st = CFrame.new(B, A)
+--			local za = CFrame.Angles(pi/2,0,0)
+
+--			local cf0 = st
+
+--			local Top_Look = (cf0 * za).lookVector
+--			local Mid_Point = A + CFrame.new(A, B).LookVector * para
+--			local Needed_Look = CFrame.new(Mid_Point, C).LookVector
+--			local dot = Top_Look.x*Needed_Look.x + Top_Look.y*Needed_Look.y + Top_Look.z*Needed_Look.z
+
+--			local ac = CFrame.Angles(0, 0, acos(dot))
+
+--			cf0 = cf0 * ac
+--			if ((cf0 * za).lookVector - Needed_Look).magnitude > 0.01 then
+--				cf0 = cf0 * CFrame.Angles(0, 0, -2*acos(dot))
+--			end
+--			cf0 = cf0 * CFrame.new(0, perp/2, -(dif_para + para/2))
+
+--			local cf1 = st * ac * CFrame.Angles(0, pi, 0)
+--			if ((cf1 * za).lookVector - Needed_Look).magnitude > 0.01 then
+--				cf1 = cf1 * CFrame.Angles(0, 0, 2*acos(dot))
+--			end
+--			cf1 = cf1 * CFrame.new(0, perp/2, dif_para/2)
+
+--			if not p0 then
+--				p0 = Instance.new('Part')
+--				p0.FormFactor = 'Custom'
+--				p0.TopSurface = 0
+--				p0.BottomSurface = 0
+--				p0.Anchored = true
+--				p0.CanCollide = false
+--				p0.Material = 'Glass'
+--				p0.Size = Vector3.new(sz, sz, sz)
+--				local mesh = Instance.new('SpecialMesh', p0)
+--				mesh.MeshType = 2
+--				mesh.Name = 'WedgeMesh'
+--			end
+--			p0.WedgeMesh.Scale = Vector3.new(0, perp/sz, para/sz)
+--			p0.CFrame = cf0
+
+--			if not p1 then
+--				p1 = p0:clone()
+--			end
+--			p1.WedgeMesh.Scale = Vector3.new(0, perp/sz, dif_para/sz)
+--			p1.CFrame = cf1
+
+--			return p0, p1
+--		end
+
+--		function DrawQuad(v1, v2, v3, v4, parts)
+--			parts[1], parts[2] = DrawTriangle(v1, v2, v3, parts[1], parts[2])
+--			parts[3], parts[4] = DrawTriangle(v3, v2, v4, parts[3], parts[4])
+--		end
+--	end
+
+--	function module:BindFrame(frame, properties)
+--		if binds[frame] then
+--			return binds[frame].parts
+--		end
+
+--		local uid = GenUid()
+--		local parts = {}
+--		local f = Instance.new('Folder', getRoot())
+--		f.Name = frame.Name
+
+--		local parents = {}
+--		do
+--			local function add(child)
+--				if child:IsA'GuiObject' then
+--					parents[#parents + 1] = child
+--					add(child.Parent)
+--				end
+--			end
+--			add(frame)
+--		end
+
+--		local function UpdateOrientation(fetchProps)
+--			local zIndex = 1 - 0.05*frame.ZIndex
+--			local tl, br = frame.AbsolutePosition, frame.AbsolutePosition + frame.AbsoluteSize
+--			local tr, bl = Vector2.new(br.x, tl.y), Vector2.new(tl.x, br.y)
+--			do
+--				local rot = 0
+--				for _, v in ipairs(parents) do
+--					rot = rot + v.Rotation
+--				end
+--				if rot ~= 0 and rot%180 ~= 0 then
+--					local mid = tl:lerp(br, 0.5)
+--					local s, c = math.sin(math.rad(rot)), math.cos(math.rad(rot))
+--					local vec = tl
+--					tl = Vector2.new(c*(tl.x - mid.x) - s*(tl.y - mid.y), s*(tl.x - mid.x) + c*(tl.y - mid.y)) + mid
+--					tr = Vector2.new(c*(tr.x - mid.x) - s*(tr.y - mid.y), s*(tr.x - mid.x) + c*(tr.y - mid.y)) + mid
+--					bl = Vector2.new(c*(bl.x - mid.x) - s*(bl.y - mid.y), s*(bl.x - mid.x) + c*(bl.y - mid.y)) + mid
+--					br = Vector2.new(c*(br.x - mid.x) - s*(br.y - mid.y), s*(br.x - mid.x) + c*(br.y - mid.y)) + mid
+--				end
+--			end
+--			DrawQuad(
+--				camera:ScreenPointToRay(tl.x, tl.y, zIndex).Origin, 
+--				camera:ScreenPointToRay(tr.x, tr.y, zIndex).Origin, 
+--				camera:ScreenPointToRay(bl.x, bl.y, zIndex).Origin, 
+--				camera:ScreenPointToRay(br.x, br.y, zIndex).Origin, 
+--				parts
+--			)
+--			if fetchProps then
+--				for _, pt in pairs(parts) do
+--					pt.Parent = f
+--				end
+--				for propName, propValue in pairs(properties) do
+--					for _, pt in pairs(parts) do
+--						pt[propName] = propValue
+--					end
+--				end
+--			end
+--		end
+
+--		UpdateOrientation(true)
+--		runService:BindToRenderStep(uid, 2000, UpdateOrientation)
+
+--		binds[frame] = {
+--			uid = uid,
+--			parts = parts
+--		}
+--		return binds[frame].parts
+--	end
+
+--	function module:Modify(frame, properties)
+--		local parts = module:GetBoundParts(frame)
+--		if parts then
+--			for propName, propValue in pairs(properties) do
+--				for _, pt in pairs(parts) do
+--					pt[propName] = propValue
+--				end
+--			end
+--		end
+--	end
+
+--	function module:UnbindFrame(frame)
+--		if RootParent == nil then return end
+--		local cb = binds[frame]
+--		if cb then
+--			runService:UnbindFromRenderStep(cb.uid)
+--			for _, v in pairs(cb.parts) do
+--				v:Destroy()
+--			end
+--			binds[frame] = nil
+--		end
+--		if getRoot():FindFirstChild(frame.Name) then
+--			getRoot()[frame.Name]:Destroy()
+--		end
+--	end
+
+--	function module:HasBinding(frame)
+--		return binds[frame] ~= nil
+--	end
+
+--	function module:GetBoundParts(frame)
+--		return binds[frame] and binds[frame].parts
+--	end
+
+
+--	return module
+
+--end)()
+
+-- Sirius Functions
+local function checkSirius() return UI.Parent end
+local function getPing() return math.clamp(statsService.Network.ServerStatsItem["Data Ping"]:GetValue(), 10, 700) end
+local function checkFolder() if isfolder then if not isfolder(siriusValues.siriusFolder) then makefolder(siriusValues.siriusFolder) end if not isfolder(siriusValues.siriusFolder.."/Music") then makefolder(siriusValues.siriusFolder.."/Music") writefile(siriusValues.siriusFolder.."/Music/readme.txt", "Hey there! Place your MP3 or other audio files in this folder, and have the ability to play them through the Sirius Music UI!") end if not isfolder(siriusValues.siriusFolder.."/Assets/Icons") then makefolder(siriusValues.siriusFolder.."/Assets/Icons") end if not isfolder(siriusValues.siriusFolder.."/Assets") then makefolder(siriusValues.siriusFolder.."/Assets") end end end
+local function isPanel(name) return not table.find({"Home", "Music", "Settings"}, name) end
+
+local function fetchFromCDN(path, write, savePath)
+	pcall(function()
+		checkFolder()
+
+		local file = game:HttpGet(siriusValues.cdn..path) or nil
+		if not file then return end
+		if not write then return file end
+
+
+		writefile(siriusValues.siriusFolder.."/"..savePath, file)
+
+		return
+	end)
+end
+
+local function fetchIcon(iconName)
+	pcall(function()
+		checkFolder()
+
+		local pathCDN = siriusValues.icons..iconName..".png"
+		local path = siriusValues.siriusFolder.."/Assets/"..iconName..".png"
+
+		if not isfile(path) then
+			local file = game:HttpGet(pathCDN)
+			if not file then return end
+
+			writefile(path, file)
+		end
+
+		local imageToReturn = getcustomasset(path)
+
+		return imageToReturn
+	end)
+end
+
+local function storeOriginalText(element)
+	originalTextValues[element] = element.Text
+end
+
+local function undoAnonymousChanges()
+	for element, originalText in pairs(originalTextValues) do
+		element.Text = originalText
+	end
+end
+
+local function createEsp(player)
+	if player == localPlayer or not checkSirius() then 
+		return
+	end
+
+	local highlight = Instance.new("Highlight")
+	highlight.FillTransparency = 1
+	highlight.OutlineTransparency = 0
+	highlight.OutlineColor = Color3.new(1,1,1)
+	highlight.Adornee = player.Character
+	highlight.Name = player.Name
+	highlight.Enabled = siriusValues.actions[7].enabled
+	highlight.Parent = espContainer
+
+	player.CharacterAdded:Connect(function(character)
+		if not checkSirius() then return end
+		task.wait()
+		highlight.Adornee = character
+	end)
+end
+
+local function makeDraggable(object)
+	local dragging = false
+	local relative = nil
+
+	local offset = Vector2.zero
+	local screenGui = object:FindFirstAncestorWhichIsA("ScreenGui")
+	if screenGui and screenGui.IgnoreGuiInset then
+		offset += guiService:GetGuiInset()
+	end
+
+	object.InputBegan:Connect(function(input, processed)
+		if processed then return end
+
+		local inputType = input.UserInputType.Name
+		if inputType == "MouseButton1" or inputType == "Touch" then
+			relative = object.AbsolutePosition + object.AbsoluteSize * object.AnchorPoint - userInputService:GetMouseLocation()
+			dragging = true
+		end
+	end)
+
+	local inputEnded = userInputService.InputEnded:Connect(function(input)
+		if not dragging then return end
+
+		local inputType = input.UserInputType.Name
+		if inputType == "MouseButton1" or inputType == "Touch" then
+			dragging = false
+		end
+	end)
+
+	local renderStepped = runService.RenderStepped:Connect(function()
+		if dragging then
+			local position = userInputService:GetMouseLocation() + relative + offset
+			object.Position = UDim2.fromOffset(position.X, position.Y)
+		end
+	end)
+
+	object.Destroying:Connect(function()
+		inputEnded:Disconnect()
+		renderStepped:Disconnect()
+	end)
+end
+
+local function checkAction(target)
+	local toReturn = {}
+
+	for _, action in ipairs(siriusValues.actions) do
+		if action.name == target then
+			toReturn.action = action
+			break
+		end
+	end
+
+	for _, action in ipairs(characterPanel.Interactions.Grid:GetChildren()) do
+		if action.name == target then
+			toReturn.object = action
+			break
+		end
+	end
+
+	return toReturn
+end
+
+local function checkSetting(settingTarget, categoryTarget)
+	for _, category in ipairs(siriusSettings) do
+		if categoryTarget then
+			if category.name == categoryTarget then
+				for _, setting in ipairs(category.categorySettings) do
+					if setting.name == settingTarget then
+						return setting
+					end
+				end
+			end
+			return
+		else
+			for _, setting in ipairs(category.categorySettings) do
+				if setting.name == settingTarget then
+					return setting
 				end
 			end
 		end
 	end
-	
-	function Connection:FireConnection(CoName, ...)
-		local Connection = type(CoName) == "string" and Connections[CoName] or Connections[CoName.Name]
-		for _,Func in pairs(Connection) do
-			task.spawn(Func, ...)
-		end
-	end
-	
-	NewConnectionList({"FlagsChanged", "ThemeChanged", "FileSaved", "ThemeChanging", "OptionAdded"})
 end
 
-local GetFlag, SetFlag, CheckFlag do
-	CheckFlag = function(Name)
-		return type(Name) == "string" and Flags[Name] ~= nil
-	end
-	
-	GetFlag = function(Name)
-		return type(Name) == "string" and Flags[Name]
-	end
-	
-	SetFlag = function(Flag, Value)
-		if Flag and (Value ~= Flags[Flag] or type(Value) == "table") then
-			Flags[Flag] = Value
-			Connection:FireConnection("FlagsChanged", Flag, Value)
+local function wipeTransparency(ins, target, checkSelf, tween, duration)
+	local transparencyProperties = siriusValues.transparencyProperties
+
+	local function applyTransparency(obj)
+		local properties = transparencyProperties[obj.className]
+
+		if properties then
+			local tweenProperties = {}
+
+			for _, property in ipairs(properties) do
+				tweenProperties[property] = target
+			end
+
+			for property, transparency in pairs(tweenProperties) do
+				if tween then
+					tweenService:Create(obj, TweenInfo.new(duration, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {[property] = transparency}):Play()
+				else
+					obj[property] = transparency
+				end
+
+			end
 		end
 	end
-	
-	local db
-	Connection.FlagsChanged:Connect(function(Flag, Value)
-		local ScriptFile = Settings.ScriptFile
-		if not db and ScriptFile and writefile then
-			db=true;task.wait(0.1);db=false
-			
-			local Success, Encoded = pcall(function()
-				-- local _Flags = {}
-				-- for _,Flag in pairs(Flags) do _Flags[_] = Flag.Value end
-				return HttpService:JSONEncode(Flags)
+
+	if checkSelf then
+		applyTransparency(ins)
+	end
+
+	for _, descendant in ipairs(ins:getDescendants()) do
+		applyTransparency(descendant)
+	end
+end
+
+local function blurSignature(value)
+	if not value then
+		if lighting:FindFirstChild("SiriusBlur") then
+			lighting:FindFirstChild("SiriusBlur"):Destroy()
+		end
+	else
+		if not lighting:FindFirstChild("SiriusBlur") then
+			local blurLight = Instance.new("DepthOfFieldEffect", lighting)
+			blurLight.Name = "SiriusBlur"
+			blurLight.Enabled = true
+			blurLight.FarIntensity = 0
+			blurLight.FocusDistance = 51.6
+			blurLight.InFocusRadius = 50
+			blurLight.NearIntensity = 0.8
+		end
+	end
+end
+
+local function figureNotifications()
+	if checkSirius() then
+		local notificationsSize = 0
+
+		if #notifications > 0 then
+			blurSignature(true)
+		else
+			blurSignature(false)
+		end
+
+		for i = #notifications, 0, -1 do
+			local notification = notifications[i]
+			if notification then
+				if notificationsSize == 0 then
+					notificationsSize = notification.Size.Y.Offset + 2
+				else
+					notificationsSize += notification.Size.Y.Offset + 5
+				end
+				local desiredPosition = UDim2.new(0.5, 0, 0, notificationsSize)
+				if notification.Position ~= desiredPosition then
+					notification:TweenPosition(desiredPosition, "Out", "Quint", 0.8, true)
+				end
+			end
+		end	
+	end
+end
+
+local contentProvider = game:GetService("ContentProvider")
+
+local function queueNotification(Title, Description, Image)
+	task.spawn(function()		
+		if checkSirius() then
+			local newNotification = notificationContainer.Template:Clone()
+			newNotification.Parent = notificationContainer
+			newNotification.Name = Title or "Unknown Title"
+			newNotification.Visible = true
+
+			newNotification.Title.Text = Title or "Unknown Title"
+			newNotification.Description.Text = Description or "Unknown Description"
+			newNotification.Time.Text = "now"
+
+			-- Prepare for animation
+			newNotification.AnchorPoint = Vector2.new(0.5, 1)
+			newNotification.Position = UDim2.new(0.5, 0, -1, 0)
+			newNotification.Size = UDim2.new(0, 320, 0, 500)
+			newNotification.Description.Size = UDim2.new(0, 241, 0, 400)
+			wipeTransparency(newNotification, 1, true)
+
+			newNotification.Description.Size = UDim2.new(0, 241, 0, newNotification.Description.TextBounds.Y)
+			newNotification.Size = UDim2.new(0, 100, 0, newNotification.Description.TextBounds.Y + 50)
+
+			table.insert(notifications, newNotification)
+			figureNotifications()
+
+			local notificationSound = Instance.new("Sound")
+			notificationSound.Parent = UI
+			notificationSound.SoundId = "rbxassetid://255881176"
+			notificationSound.Name = "notificationSound"
+			notificationSound.Volume = 0.65
+			notificationSound.PlayOnRemove = true
+			notificationSound:Destroy()
+
+
+			if not tonumber(Image) then
+				newNotification.Icon.Image = 'rbxassetid://14317577326'
+			else
+				newNotification.Icon.Image = 'rbxassetid://'..Image or 0
+			end
+
+			newNotification:TweenPosition(UDim2.new(0.5, 0, 0, newNotification.Size.Y.Offset + 2), "Out", "Quint", 0.9, true)
+			task.wait(0.1)
+			tweenService:Create(newNotification, TweenInfo.new(0.8, Enum.EasingStyle.Exponential), {Size = UDim2.new(0, 320, 0, newNotification.Description.TextBounds.Y + 50)}):Play()
+			task.wait(0.05)
+			tweenService:Create(newNotification, TweenInfo.new(0.8, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.35}):Play()
+			tweenService:Create(newNotification.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Transparency = 0.7}):Play()
+			task.wait(0.05)
+			tweenService:Create(newNotification.Icon, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {ImageTransparency = 0}):Play()
+			task.wait(0.04)
+			tweenService:Create(newNotification.Title, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
+			task.wait(0.04)
+			tweenService:Create(newNotification.Description, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {TextTransparency = 0.15}):Play()
+			tweenService:Create(newNotification.Time, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {TextTransparency = 0.5}):Play()
+
+			--neonModule:BindFrame(newNotification.BlurModule, {
+			--	Transparency = 0.98,
+			--	BrickColor = BrickColor.new("Institutional white")
+			--})
+
+			newNotification.Interact.MouseButton1Click:Connect(function()
+				local foundNotification = table.find(notifications, newNotification)
+				if foundNotification then table.remove(notifications, foundNotification) end
+
+				tweenService:Create(newNotification, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {Position = UDim2.new(1.5, 0, 0, newNotification.Position.Y.Offset)}):Play()
+
+				task.wait(0.4)
+				newNotification:Destroy()
+				figureNotifications()
+				return
 			end)
-			
-			if Success then
-				local Success = pcall(writefile, ScriptFile, Encoded)
-				if Success then
-					Connection:FireConnection("FileSaved", "Script-Flags", ScriptFile, Encoded)
-				end
-			end
+
+			local waitTime = (#newNotification.Description.Text*0.1)+2
+			if waitTime <= 1 then waitTime = 2.5 elseif waitTime > 10 then waitTime = 10 end
+
+			task.wait(waitTime)
+
+			local foundNotification = table.find(notifications, newNotification)
+			if foundNotification then table.remove(notifications, foundNotification) end
+
+			tweenService:Create(newNotification, TweenInfo.new(0.8, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {Position = UDim2.new(1.5, 0, 0, newNotification.Position.Y.Offset)}):Play()
+
+			task.wait(1.2)
+			--neonModule:UnbindFrame(newNotification.BlurModule)
+			newNotification:Destroy()
+			figureNotifications()
 		end
 	end)
 end
 
-local ScreenGui = Create("ScreenGui", CoreGui, {
-	Name = "redz Library V5",
-}, {
-	Create("UIScale", {
-		Scale = UIScale,
-		Name = "Scale"
-	})
-})
+local function checkLastVersion()
+	checkFolder()
 
-local ScreenFind = CoreGui:FindFirstChild(ScreenGui.Name)
-if ScreenFind and ScreenFind ~= ScreenGui then
-	ScreenFind:Destroy()
-end
+	local lastVersion = isfile and isfile(siriusValues.siriusFolder.."/".."version.srs") and readfile(siriusValues.siriusFolder.."/".."version.srs") or nil
 
-local function GetStr(val)
-	if type(val) == "function" then
-		return val()
+	if lastVersion then
+		if lastVersion ~= siriusValues.siriusVersion then queueNotification("Sirius has been updated", "Sirius has been updated to version "..siriusValues.siriusVersion..", check our Discord for all new features and changes.", 4400701828)  end
 	end
-	return val
+
+	if writefile then writefile(siriusValues.siriusFolder.."/".."version.srs", siriusValues.siriusVersion) end
 end
 
-local function ConnectSave(Instance, func)
-	Instance.InputBegan:Connect(function(Input)
-		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-			while UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do task.wait()
-			end
+local function removeReverbs(timing)
+	timing = timing or 0.65
+
+	for index, sound in next, soundInstances do
+		if sound:FindFirstChild("SiriusAudioProfile") then
+			local reverb = sound:FindFirstChild("SiriusAudioProfile")
+			tweenService:Create(reverb, TweenInfo.new(timing, Enum.EasingStyle.Exponential), {HighGain = 0}):Play()
+			tweenService:Create(reverb, TweenInfo.new(timing, Enum.EasingStyle.Exponential), {LowGain = 0}):Play()
+			tweenService:Create(reverb, TweenInfo.new(timing, Enum.EasingStyle.Exponential), {MidGain = 0}):Play()
+
+			task.delay(timing + 0.03, reverb.Destroy, reverb)
 		end
-		func()
+	end
+end
+
+local function playNext()
+	if #musicQueue == 0 then currentAudio.Playing = false currentAudio.SoundId = "" musicPanel.Playing.Text = "Not Playing" return end
+
+	if not currentAudio then
+		local newAudio = Instance.new("Sound")
+		newAudio.Parent = UI
+		newAudio.Name = "Audio"
+		currentAudio = newAudio
+	end
+
+	musicPanel.Menu.TogglePlaying.ImageRectOffset = currentAudio.Playing and Vector2.new(804, 124) or Vector2.new(764, 244)
+	local asset = getcustomasset(siriusValues.siriusFolder.."/Music/"..musicQueue[1].sound)
+
+	if checkSetting("Now Playing Notifications").current then queueNotification("Now Playing", musicQueue[1].sound, 4400695581) end
+
+	if musicPanel.Queue.List:FindFirstChild(tostring(musicQueue[1].instanceName)) then
+		musicPanel.Queue.List:FindFirstChild(tostring(musicQueue[1].instanceName)):Destroy()
+	end
+
+	currentAudio.SoundId = asset
+	musicPanel.Playing.Text = musicQueue[1].sound
+	currentAudio:Play()
+	musicPanel.Menu.TogglePlaying.ImageRectOffset = currentAudio.Playing and Vector2.new(804, 124) or Vector2.new(764, 244)
+	currentAudio.Ended:Wait()
+
+	table.remove(musicQueue, 1)
+
+	playNext()
+end
+
+local function addToQueue(file)
+	if not getcustomasset then return end
+	checkFolder()
+	if not isfile(siriusValues.siriusFolder.."/Music/"..file) then queueNotification("Unable to locate file", "Please ensure that your audio file is in the Sirius/Music folder and that you are including the file extension (e.g mp3 or ogg).", 4370341699) return end
+	musicPanel.AddBox.Input.Text = ""
+
+	local newAudio = musicPanel.Queue.List.Template:Clone()
+	newAudio.Parent = musicPanel.Queue.List
+	newAudio.Size = UDim2.new(0, 254, 0, 40)
+	newAudio.Close.ImageTransparency = 1
+	newAudio.Name = file
+	if string.len(newAudio.FileName.Text) > 26 then
+		newAudio.FileName.Text = string.sub(tostring(file), 1,24)..".."
+	else
+		newAudio.FileName.Text = file
+	end
+	newAudio.Visible = true
+	newAudio.Duration.Text = ""
+
+	table.insert(musicQueue, {sound = file, instanceName = newAudio.Name})
+
+	local getLength = Instance.new("Sound", workspace)
+	getLength.SoundId = getcustomasset(siriusValues.siriusFolder.."/Music/"..file)
+	getLength.Volume = 0
+	getLength:Play()
+	task.wait(0.05)
+	newAudio.Duration.Text = tostring(math.round(getLength.TimeLength)).."s"
+	getLength:Stop()
+	getLength:Destroy()
+
+	newAudio.MouseEnter:Connect(function()
+		tweenService:Create(newAudio, TweenInfo.new(0.45, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(100, 100, 100)}):Play()
+		tweenService:Create(newAudio.Close, TweenInfo.new(0.45, Enum.EasingStyle.Exponential), {ImageTransparency = 0}):Play()
+		tweenService:Create(newAudio.Duration, TweenInfo.new(0.45, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play()
 	end)
-end
 
-local function CreateTween(Configs)
-	local Instance = Configs[1] or Configs.Instance
-	local Prop = Configs[2] or Configs.Prop
-	local NewVal = Configs[3] or Configs.NewVal
-	local Time = Configs[4] or Configs.Time or 0.5
-	local TweenWait = Configs[5] or Configs.wait or false
-	local TweenInfo = TweenInfo.new(Time, Enum.EasingStyle.Quint)
-	
-	local Tween = TweenService:Create(Instance, TweenInfo, {[Prop] = NewVal})
-	Tween:Play()
-	if TweenWait then
-		Tween.Completed:Wait()
-	end
-	return Tween
-end
+	newAudio.MouseLeave:Connect(function()
+		tweenService:Create(newAudio.Close, TweenInfo.new(0.45, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
+		tweenService:Create(newAudio, TweenInfo.new(0.45, Enum.EasingStyle.Exponential), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
+		tweenService:Create(newAudio.Duration, TweenInfo.new(0.45, Enum.EasingStyle.Exponential), {TextTransparency = 0.7}):Play()
+	end)
 
-local function MakeDrag(Instance)
-	task.spawn(function()
-		SetProps(Instance, {
-			Active = true,
-			AutoButtonColor = false
-		})
-		
-		local DragStart, StartPos, InputOn
-		
-		local function Update(Input)
-			local delta = Input.Position - DragStart
-			local Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + delta.X / UIScale, StartPos.Y.Scale, StartPos.Y.Offset + delta.Y / UIScale)
-			-- Instance.Position = Position
-			CreateTween({Instance, "Position", Position, 0.35})
-		end
-		
-		Instance.MouseButton1Down:Connect(function()
-			InputOn = true
-		end)
-		
-		Instance.InputBegan:Connect(function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-				StartPos = Instance.Position
-				DragStart = Input.Position
-				
-				while UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do RunService.Heartbeat:Wait()
-					if InputOn then
-						Update(Input)
+	newAudio.Close.MouseButton1Click:Connect(function()
+		if not string.find(currentAudio.Name, file) then
+			for i,v in pairs(musicQueue) do
+				for _,b in pairs(v) do
+					if b == newAudio.Name then
+						newAudio:Destroy()
+						table.remove(musicQueue, i)
 					end
 				end
-				InputOn = false
 			end
-		end)
-	end)
-	return Instance
-end
-
-local function VerifyTheme(Theme)
-	for name,_ in pairs(redzlib.Themes) do
-		if name == Theme then
-			return true
-		end
-	end
-end
-
-local function SaveJson(FileName, save)
-	if writefile then
-		local json = HttpService:JSONEncode(save)
-		writefile(FileName, json)
-	end
-end
-
-local Theme = redzlib.Themes[redzlib.Save.Theme]
-
-local function AddEle(Name, Func)
-	redzlib.Elements[Name] = Func
-end
-
-local function Make(Ele, Instance, props, ...)
-	local Element = redzlib.Elements[Ele](Instance, props, ...)
-	return Element
-end
-
-AddEle("Corner", function(parent, CornerRadius)
-	local New = SetProps(Create("UICorner", parent, {
-		CornerRadius = CornerRadius or UDim.new(0, 7)
-	}), props)
-	return New
-end)
-
-AddEle("Stroke", function(parent, props, ...)
-	local args = {...}
-		Color = args[1] or Theme["Color Stroke"],
-		Thickness = args[2] or 1,
-	}), props), "Stroke")
-	return New
-end)
-
-AddEle("Button", function(parent, props, ...)
-	local args = {...}
-	local New = InsertTheme(SetProps(Create("TextButton", parent, {
-		Text = "",
-		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = Theme["Color Hub 2"],
-		AutoButtonColor = false
-	}), props), "Frame")
-	
-	New.MouseEnter:Connect(function()
-		New.BackgroundTransparency = 0.4
-	end)
-	New.MouseLeave:Connect(function()
-		New.BackgroundTransparency = 0
-	end)
-	if args[1] then
-		New.Activated:Connect(args[1])
-	end
-	return New
-end)
-
-AddEle("Gradient", function(parent, props, ...)
-	local args = {...}
-	local New = InsertTheme(SetProps(Create("UIGradient", parent, {
-		Color = Theme["Color Hub 1"]
-	}), props), "Gradient")
-	return New
-end)
-
-local function ButtonFrame(Instance, Title, Description, HolderSize)
-	local TitleL = InsertTheme(Create("TextLabel", {
-		Font = Enum.Font.GothamMedium,
-		TextColor3 = Theme["Color Text"],
-		Size = UDim2.new(1, -20),
-		AutomaticSize = "Y",
-		Position = UDim2.new(0, 0, 0.5),
-		AnchorPoint = Vector2.new(0, 0.5),
-		BackgroundTransparency = 1,
-		TextTruncate = "AtEnd",
-		TextSize = 10,
-		TextXAlignment = "Left",
-		Text = "",
-		RichText = true
-	}), "Text")
-	
-	local DescL = InsertTheme(Create("TextLabel", {
-		Font = Enum.Font.Gotham,
-		TextColor3 = Theme["Color Dark Text"],
-		Size = UDim2.new(1, -20),
-		AutomaticSize = "Y",
-		Position = UDim2.new(0, 12, 0, 15),
-		BackgroundTransparency = 1,
-		TextWrapped = true,
-		TextSize = 8,
-		TextXAlignment = "Left",
-		Text = "",
-		RichText = true
-	}), "DarkText")
-
-	local Frame = Make("Button", Instance, {
-		Size = UDim2.new(1, 0, 0, 25),
-		AutomaticSize = "Y",
-		Name = "Option"
-	})Make("Corner", Frame, UDim.new(0, 6))
-	
-	LabelHolder = Create("Frame", Frame, {
-		AutomaticSize = "Y",
-		BackgroundTransparency = 1,
-		Size = HolderSize,
-		Position = UDim2.new(0, 10, 0),
-		AnchorPoint = Vector2.new(0, 0)
-	}, {
-		Create("UIListLayout", {
-			SortOrder = "LayoutOrder",
-			VerticalAlignment = "Center",
-			Padding = UDim.new(0, 2)
-		}),
-		Create("UIPadding", {
-			PaddingBottom = UDim.new(0, 5),
-			PaddingTop = UDim.new(0, 5)
-		}),
-		TitleL,
-		DescL,
-	})
-	
-	local Label = {}
-	function Label:SetTitle(NewTitle)
-		if type(NewTitle) == "string" and NewTitle:gsub(" ", ""):len() > 0 then
-			TitleL.Text = NewTitle
-		end
-	end
-	function Label:SetDesc(NewDesc)
-		if type(NewDesc) == "string" and NewDesc:gsub(" ", ""):len() > 0 then
-			DescL.Visible = true
-			DescL.Text = NewDesc
-			LabelHolder.Position = UDim2.new(0, 10, 0)
-			LabelHolder.AnchorPoint = Vector2.new(0, 0)
 		else
-			DescL.Visible = false
-			DescL.Text = ""
-			LabelHolder.Position = UDim2.new(0, 10, 0.5)
-			LabelHolder.AnchorPoint = Vector2.new(0, 0.5)
-		end
-	end
-	
-	Label:SetTitle(Title)
-	Label:SetDesc(Description)
-	return Frame, Label
-end
-
-local function GetColor(Instance)
-	if Instance:IsA("Frame") then
-		return "BackgroundColor3"
-	elseif Instance:IsA("ImageLabel") then
-		return "ImageColor3"
-	elseif Instance:IsA("TextLabel") then
-		return "TextColor3"
-	elseif Instance:IsA("ScrollingFrame") then
-		return "ScrollBarImageColor3"
-		return "Color"
-	end
-	return ""
-end
-
--- /////////// --
-function redzlib:GetIcon(index)
-	if type(index) ~= "string" or index:find("rbxassetid://") or #index == 0 then
-		return index
-	end
-	
-	local firstMatch = nil
-	index = string.lower(index):gsub("lucide", ""):gsub("-", "")
-	
-	if self.Icons[index] then
-	  return self.Icons[index]
-	end
-	
-	for Name, Icon in self.Icons do
-		if Name == index then
-			return Icon
-		elseif not firstMatch and Name:find(index, 1, true) then
-			firstMatch = Icon
-		end
-	end
-	
-	return firstMatch or index
-end
-
-function redzlib:SetTheme(NewTheme)
-	if not VerifyTheme(NewTheme) then return end
-	
-	redzlib.Save.Theme = NewTheme
-	SaveJson("redz library V5.json", redzlib.Save)
-	Theme = redzlib.Themes[NewTheme]
-	
-	Comnection:FireConnection("ThemeChanged", NewTheme)
-	for k,v in pairs(redzlib.Instances, function(_,Val)
-		if Val.Type == "Gradient" then
-		elseif Val.Type == "Frame" then
-			Val.Instance.BackgroundColor3 = Theme["Color Hub 2"]
-		elseif Val.Type == "Stroke" then
-			Val.Instance[GetColor(Val.Instance)] = Theme["Color Stroke"]
-		elseif Val.Type == "Theme" then
-			Val.Instance[GetColor(Val.Instance)] = Theme["Color Theme"]
-		elseif Val.Type == "Text" then
-			Val.Instance[GetColor(Val.Instance)] = Theme["Color Text"]
-		elseif Val.Type == "DarkText" then
-			Val.Instance[GetColor(Val.Instance)] = Theme["Color Dark Text"]
-		elseif Val.Type == "ScrollBar" then
-			Val.Instance[GetColor(Val.Instance)] = Theme["Color Theme"]
-		end
-	end)
-end
-
-function redzlib:SetScale(NewScale)
-	NewScale = ViewportSize.Y / math.clamp(NewScale, 300, 2000)
-	UIScale, ScreenGui.Scale.Scale = NewScale, NewScale
-end
-
-function redzlib:MakeWindow(Configs)
-	local WTitle = Configs[1] or Configs.Name or Configs.Title or "redz Library V5"
-	local WMiniText = Configs[2] or Configs.SubTitle or "by : redz9999"
-	
-	Settings.ScriptFile = Configs[3] or Configs.SaveFolder or false
-	
-	local function LoadFile()
-		local File = Settings.ScriptFile
-		if type(File) ~= "string" then return end
-		if not readfile or not isfile then return end
-		local s, r = pcall(isfile, File)
-		
-		if s and r then
-			local s, _Flags = pcall(readfile, File)
-			
-			if s and type(_Flags) == "string" then
-				local s,r = pcall(function() return HttpService:JSONDecode(_Flags) end)
-				Flags = s and r or {}
+			for i,v in pairs(musicQueue) do
+				for _,b in pairs(v) do
+					if b == newAudio.Name then
+						newAudio:Destroy()
+						table.remove(musicQueue, i)
+						playNext()
+					end
+				end
 			end
 		end
-	end;LoadFile()
-	
-	local UISizeX, UISizeY = unpack(redzlib.Save.UISize)
-	local MainFrame = InsertTheme(Create("ImageButton", ScreenGui, {
-		Size = UDim2.fromOffset(UISizeX, UISizeY),
-		Position = UDim2.new(0.5, -UISizeX/2, 0.5, -UISizeY/2),
-		BackgroundTransparency = 0.03,
-		Name = "Hub"
-	}), "Main")
-	Make("Gradient", MainFrame, {
-		Rotation = 45
-	})MakeDrag(MainFrame)
-	
-	local MainCorner = Make("Corner", MainFrame)
-	
-	local Components = Create("Folder", MainFrame, {
-		Name = "Components"
-	})
-	
-	local DropdownHolder = Create("Folder", ScreenGui, {
-		Name = "Dropdown"
-	})
-	
-	local TopBar = Create("Frame", Components, {
-		Size = UDim2.new(1, 0, 0, 28),
-		BackgroundTransparency = 1,
-		Name = "Top Bar"
-	})
-	
-	local Title = InsertTheme(Create("TextLabel", TopBar, {
-		Position = UDim2.new(0, 15, 0.5),
-		AnchorPoint = Vector2.new(0, 0.5),
-		AutomaticSize = "XY",
-		Text = WTitle,
-		TextXAlignment = "Left",
-		TextSize = 12,
-		TextColor3 = Theme["Color Text"],
-		BackgroundTransparency = 1,
-		Font = Enum.Font.GothamMedium,
-		Name = "Title"
-	}, {
-		InsertTheme(Create("TextLabel", {
-			Size = UDim2.fromScale(0, 1),
-			AutomaticSize = "X",
-			AnchorPoint = Vector2.new(0, 1),
-			Position = UDim2.new(1, 5, 0.9),
-			Text = WMiniText,
-			TextColor3 = Theme["Color Dark Text"],
-			BackgroundTransparency = 1,
-			TextXAlignment = "Left",
-			TextYAlignment = "Bottom",
-			TextSize = 8,
-			Font = Enum.Font.Gotham,
-			Name = "SubTitle"
-		}), "DarkText")
-	}), "Text")
-	
-	local MainScroll = InsertTheme(Create("ScrollingFrame", Components, {
-		Size = UDim2.new(0, redzlib.Save.TabSize, 1, -TopBar.Size.Y.Offset),
-		ScrollBarImageColor3 = Theme["Color Theme"],
-		Position = UDim2.new(0, 0, 1, 0),
-		AnchorPoint = Vector2.new(0, 1),
-		ScrollBarThickness = 1.5,
-		BackgroundTransparency = 1,
-		ScrollBarImageTransparency = 0.2,
-		CanvasSize = UDim2.new(),
-		AutomaticCanvasSize = "Y",
-		ScrollingDirection = "Y",
-		BorderSizePixel = 0,
-		Name = "Tab Scroll"
-	}, {
-		Create("UIPadding", {
-			PaddingLeft = UDim.new(0, 10),
-			PaddingRight = UDim.new(0, 10),
-			PaddingTop = UDim.new(0, 10),
-			PaddingBottom = UDim.new(0, 10)
-		}), Create("UIListLayout", {
-			Padding = UDim.new(0, 5)
-		})
-	}), "ScrollBar")
-	
-	local Containers = Create("Frame", Components, {
-		Size = UDim2.new(1, -MainScroll.Size.X.Offset, 1, -TopBar.Size.Y.Offset),
-		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, 0, 1, 0),
-		BackgroundTransparency = 1,
-		ClipsDescendants = true,
-		Name = "Containers"
-	})
-	
-	local ControlSize1, ControlSize2 = MakeDrag(Create("ImageButton", MainFrame, {
-		Size = UDim2.new(0, 35, 0, 35),
-		Position = MainFrame.Size,
-		Active = true,
-		AnchorPoint = Vector2.new(0.8, 0.8),
-		BackgroundTransparency = 1,
-		Name = "Control Hub Size"
-	})), MakeDrag(Create("ImageButton", MainFrame, {
-		Size = UDim2.new(0, 20, 1, -30),
-		Position = UDim2.new(0, MainScroll.Size.X.Offset, 1, 0),
-		AnchorPoint = Vector2.new(0.5, 1),
-		Active = true,
-		BackgroundTransparency = 1,
-		Name = "Control Tab Size"
-	}))
-	
-	local function ControlSize()
-		local Pos1, Pos2 = ControlSize1.Position, ControlSize2.Position
-		ControlSize1.Position = UDim2.fromOffset(math.clamp(Pos1.X.Offset, 430, 1000), math.clamp(Pos1.Y.Offset, 200, 500))
-		ControlSize2.Position = UDim2.new(0, math.clamp(Pos2.X.Offset, 135, 250), 1, 0)
-		
-		MainScroll.Size = UDim2.new(0, ControlSize2.Position.X.Offset, 1, -TopBar.Size.Y.Offset)
-		Containers.Size = UDim2.new(1, -MainScroll.Size.X.Offset, 1, -TopBar.Size.Y.Offset)
-		MainFrame.Size = ControlSize1.Position
-	end
-	
-	ControlSize1:GetPropertyChangedSignal("Position"):Connect(ControlSize)
-	ControlSize2:GetPropertyChangedSignal("Position"):Connect(ControlSize)
-	
-	ConnectSave(ControlSize1, function()
-		if not Minimized then
-			redzlib.Save.UISize = {MainFrame.Size.X.Offset, MainFrame.Size.Y.Offset}
-			SaveJson("redz library V5.json", redzlib.Save)
-		end
 	end)
-	
-	ConnectSave(ControlSize2, function()
-		redzlib.Save.TabSize = MainScroll.Size.X.Offset
-		SaveJson("redz library V5.json", redzlib.Save)
-	end)
-	
-	local ButtonsFolder = Create("Folder", TopBar, {
-		Name = "Buttons"
-	})
-	
-	local CloseButton = Create("ImageButton", {
-		Size = UDim2.new(0, 14, 0, 14),
-		Position = UDim2.new(1, -10, 0.5),
-		AnchorPoint = Vector2.new(1, 0.5),
-		BackgroundTransparency = 1,
-		Image = "rbxassetid://10747384394",
-		AutoButtonColor = false,
-		Name = "Close"
-	})
-	
-	local MinimizeButton = SetProps(CloseButton:Clone(), {
-		Position = UDim2.new(1, -35, 0.5),
-		Image = "rbxassetid://10734896206",
-		Name = "Minimize"
-	})
-	
-	SetChildren(ButtonsFolder, {
-		CloseButton,
-		MinimizeButton
-	})
-	
-	local Minimized, SaveSize, WaitClick
-	local Window, FirstTab = {}, false
-	function Window:CloseBtn()
-		local Dialog = Window:Dialog({
-			Title = "Close",
-			Text = "You Want Close Ui?",
-			Options = {
-				{"Confirm", function()
-					ScreenGui:Destroy()
-				end},
-				{"Cancel"}
-			}
-		})
+
+	if #musicQueue == 1 then
+		playNext()
 	end
-	function Window:MinimizeBtn()
-		if WaitClick then return end
-		WaitClick = true
-		
-		if Minimized then
-			MinimizeButton.Image = "rbxassetid://10734896206"
-			CreateTween({MainFrame, "Size", SaveSize, 0.25, true})
-			ControlSize1.Visible = true
-			ControlSize2.Visible = true
-			Minimized = false
-		else
-			MinimizeButton.Image = "rbxassetid://10734924532"
-			SaveSize = MainFrame.Size
-			ControlSize1.Visible = false
-			ControlSize2.Visible = false
-			CreateTween({MainFrame, "Size", UDim2.fromOffset(MainFrame.Size.X.Offset, 28), 0.25, true})
-			Minimized = true
+end
+
+local function openMusic()
+	debounce = true
+	musicPanel.Visible = true
+	musicPanel.Queue.List.Template.Visible = false
+
+	debounce = false
+end
+
+local function closeMusic()
+	debounce = true
+	musicPanel.Visible = false
+
+	debounce = false
+end
+
+local function createReverb(timing)
+	for index, sound in next, soundInstances do
+		if not sound:FindFirstChild("SiriusAudioProfile") then
+			local reverb = Instance.new("EqualizerSoundEffect")
+
+			reverb.Name = "SiriusAudioProfile"
+			reverb.Parent = sound
+
+			reverb.Enabled = false
+
+			reverb.HighGain = 0
+			reverb.LowGain = 0
+			reverb.MidGain = 0
+			reverb.Enabled = true
+
+			if timing then
+				tweenService:Create(reverb, TweenInfo.new(timing, Enum.EasingStyle.Exponential), {HighGain = -20}):Play()
+				tweenService:Create(reverb, TweenInfo.new(timing, Enum.EasingStyle.Exponential), {LowGain = 5}):Play()
+				tweenService:Create(reverb, TweenInfo.new(timing, Enum.EasingStyle.Exponential), {MidGain = -20}):Play()
+			end
 		end
-		
-		WaitClick = false
 	end
-	function Window:Minimize()
-		MainFrame.Visible = not MainFrame.Visible
+end
+
+local function runScript(raw)
+	loadstring(game:HttpGet(raw))()
+end
+
+local function syncExperienceInformation()
+	siriusValues.currentCreator = creatorId
+
+	if creatorType == Enum.CreatorType.Group then
+		siriusValues.currentGroup = creatorId
+		siriusValues.currentCreator = "group"
 	end
-	function Window:AddMinimizeButton(Configs)
-		local Button = MakeDrag(Create("ImageButton", ScreenGui, {
-			Size = UDim2.fromOffset(35, 35),
-			Position = UDim2.fromScale(0.15, 0.15),
-			BackgroundTransparency = 1,
-			BackgroundColor3 = Theme["Color Hub 2"],
-			AutoButtonColor = false
-		}))
-		
-		local Stroke, Corner
-		if Configs.Corner then
-			Corner = Make("Corner", Button)
-			SetProps(Corner, Configs.Corner)
+
+	for _, gameFound in pairs(siriusValues.games) do
+		if gameFound.id == placeId and gameFound.enabled then
+
+			local minimumTier = gameFound.minimumTier
+
+			if minimumTier == "Essential" then
+				if not (Essential or Pro) then
+					return
+				end
+			elseif minimumTier == "Pro" then
+				if not Pro then
+					return
+				end
+			end
+
+			local rawFile = siriusValues.rawTree..gameFound.raw
+			siriusValues.currentGame = gameFound
+
+			gameDetectionPrompt.ScriptTitle.Text = gameFound.name
+			gameDetectionPrompt.Layer.ScriptSubtitle.Text = gameFound.description
+			gameDetectionPrompt.Thumbnail.Image = "https://assetgame.roblox.com/Game/Tools/ThumbnailAsset.ashx?aid="..tostring(placeId).."&fmt=png&wd=420&ht=420"
+
+			gameDetectionPrompt.Size = UDim2.new(0, 550, 0, 0)
+			gameDetectionPrompt.Position = UDim2.new(0.5, 0, 0, 120)
+			gameDetectionPrompt.UICorner.CornerRadius = UDim.new(0, 9)
+			gameDetectionPrompt.Thumbnail.UICorner.CornerRadius = UDim.new(0, 9)
+			gameDetectionPrompt.ScriptTitle.Position = UDim2.new(0, 30, 0.5, 0)
+			gameDetectionPrompt.Layer.Visible = false
+			gameDetectionPrompt.Warning.Visible = false
+
+			wipeTransparency(gameDetectionPrompt, 1, true)
+
+			gameDetectionPrompt.Visible = true
+
+			tweenService:Create(gameDetectionPrompt, TweenInfo.new(0.5, Enum.EasingStyle.Quint),  {BackgroundTransparency = 0}):Play()
+			tweenService:Create(gameDetectionPrompt.Thumbnail, TweenInfo.new(0.5, Enum.EasingStyle.Quint),  {ImageTransparency = 0.4}):Play()
+			tweenService:Create(gameDetectionPrompt.ScriptTitle, TweenInfo.new(0.6, Enum.EasingStyle.Quint),  {TextTransparency = 0}):Play()
+
+			tweenService:Create(gameDetectionPrompt, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 587, 0, 44)}):Play()
+			tweenService:Create(gameDetectionPrompt, TweenInfo.new(1, Enum.EasingStyle.Exponential), {Position = UDim2.new(0.5, 0, 0, 150)}):Play()
+
+			task.wait(1)
+
+			wipeTransparency(gameDetectionPrompt.Layer, 1, true)
+
+			gameDetectionPrompt.Layer.Visible = true
+
+			tweenService:Create(gameDetectionPrompt, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 473, 0, 154)}):Play()
+			tweenService:Create(gameDetectionPrompt.ScriptTitle, TweenInfo.new(1, Enum.EasingStyle.Exponential), {Position = UDim2.new(0, 23, 0.352, 0)}):Play()
+			tweenService:Create(gameDetectionPrompt, TweenInfo.new(1, Enum.EasingStyle.Exponential), {Position = UDim2.new(0.5, 0, 0, 200)}):Play()
+			tweenService:Create(gameDetectionPrompt.UICorner, TweenInfo.new(1, Enum.EasingStyle.Exponential), {CornerRadius = UDim.new(0, 13)}):Play()
+			tweenService:Create(gameDetectionPrompt.Thumbnail.UICorner, TweenInfo.new(1, Enum.EasingStyle.Exponential), {CornerRadius = UDim.new(0, 13)}):Play()
+			tweenService:Create(gameDetectionPrompt.Thumbnail, TweenInfo.new(1, Enum.EasingStyle.Exponential), {ImageTransparency = 0.5}):Play()
+
+			task.wait(0.3)
+			tweenService:Create(gameDetectionPrompt.Layer.ScriptSubtitle, TweenInfo.new(0.6, Enum.EasingStyle.Quint),  {TextTransparency = 0.3}):Play()
+			tweenService:Create(gameDetectionPrompt.Layer.Run, TweenInfo.new(0.6, Enum.EasingStyle.Quint),  {TextTransparency = 0}):Play()
+			tweenService:Create(gameDetectionPrompt.Layer.Run.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Quint),  {Transparency = 0.85}):Play()
+			tweenService:Create(gameDetectionPrompt.Layer.Run, TweenInfo.new(0.6, Enum.EasingStyle.Quint),  {BackgroundTransparency = 0.6}):Play()
+
+			task.wait(0.2)
+
+			tweenService:Create(gameDetectionPrompt.Layer.Close, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {ImageTransparency = 0.6}):Play()
+
+			task.wait(0.3)
+
+			local function closeGameDetection()
+				tweenService:Create(gameDetectionPrompt.Layer.ScriptSubtitle, TweenInfo.new(0.3, Enum.EasingStyle.Quint),  {TextTransparency = 1}):Play()
+				tweenService:Create(gameDetectionPrompt.Layer.Run, TweenInfo.new(0.3, Enum.EasingStyle.Quint),  {TextTransparency = 1}):Play()
+				tweenService:Create(gameDetectionPrompt.Layer.Run, TweenInfo.new(0.3, Enum.EasingStyle.Quint),  {BackgroundTransparency = 1}):Play()
+				tweenService:Create(gameDetectionPrompt.Layer.Close, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
+				tweenService:Create(gameDetectionPrompt.Thumbnail, TweenInfo.new(0.3, Enum.EasingStyle.Quint),  {ImageTransparency = 1}):Play()
+				tweenService:Create(gameDetectionPrompt.ScriptTitle, TweenInfo.new(0.3, Enum.EasingStyle.Quint),  {TextTransparency = 1}):Play()
+				tweenService:Create(gameDetectionPrompt.Layer.Run.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Quint),  {Transparency = 1}):Play()
+				task.wait(0.05)
+				tweenService:Create(gameDetectionPrompt, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 400, 0, 0)}):Play()
+				tweenService:Create(gameDetectionPrompt.UICorner, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {CornerRadius = UDim.new(0, 5)}):Play()
+				tweenService:Create(gameDetectionPrompt.Thumbnail.UICorner, TweenInfo.new(0.2, Enum.EasingStyle.Exponential), {CornerRadius = UDim.new(0, 5)}):Play()
+				task.wait(0.41)
+				gameDetectionPrompt.Visible = false
+			end
+
+			gameDetectionPrompt.Layer.Run.MouseButton1Click:Connect(function()
+				closeGameDetection()
+				queueNotification("Running "..gameFound.name, "Now running Sirius' "..gameFound.name.." script, this may take a moment.", 4400701828)
+				runScript(rawFile)
+
+			end)
+
+			gameDetectionPrompt.Layer.Close.MouseButton1Click:Connect(function()
+				closeGameDetection()
+			end)
+
+			break
 		end
-		if Configs.Stroke then
-			Stroke = Make("Stroke", Button)
-			SetProps(Stroke, Configs.Corner)
-		end
-		
-		SetProps(Button, Configs.Button)
-		Button.Activated:Connect(Window.Minimize)
-		
-		return {
-			Stroke = Stroke,
-			Corner = Corner,
-			Button = Button
+	end
+end
+
+local function updateSliderPadding()
+	for _, v in pairs(siriusValues.sliders) do
+		v.padding = {
+			v.object.Interact.AbsolutePosition.X,
+			v.object.Interact.AbsolutePosition.X + v.object.Interact.AbsoluteSize.X
 		}
 	end
-	function Window:Set(Val1, Val2)
-		if type(Val1) == "string" and type(Val2) == "string" then
-			Title.Text = Val1
-			Title.SubTitle.Text = Val2
-		elseif type(Val1) == "string" then
-			Title.Text = Val1
-		end
+end
+
+local function updateSlider(data, setValue, forceValue)
+	local inverse_interpolation
+
+	if setValue then
+		setValue = math.clamp(setValue, data.values[1], data.values[2])
+		inverse_interpolation = (setValue - data.values[1]) / (data.values[2] - data.values[1])
+		local posX = data.padding[1] + (data.padding[2] - data.padding[1]) * inverse_interpolation
+	else
+		local posX = math.clamp(mouse.X, data.padding[1], data.padding[2])
+		inverse_interpolation = (posX - data.padding[1]) / (data.padding[2] - data.padding[1])
 	end
-	function Window:Dialog(Configs)
-		if MainFrame:FindFirstChild("Dialog") then return end
-		if Minimized then
-			Window:MinimizeBtn()
-		end
-		
-		local DTitle = Configs[1] or Configs.Title or "Dialog"
-		local DText = Configs[2] or Configs.Text or "This is a Dialog"
-		local DOptions = Configs[3] or Configs.Options or {}
-		
-		local Frame = Create("Frame", {
-			Active = true,
-			Size = UDim2.fromOffset(250 * 1.08, 150 * 1.08),
-			Position = UDim2.fromScale(0.5, 0.5),
-			AnchorPoint = Vector2.new(0.5, 0.5)
-		}, {
-			InsertTheme(Create("TextLabel", {
-				Font = Enum.Font.GothamBold,
-				Size = UDim2.new(1, 0, 0, 20),
-				Text = DTitle,
-				TextXAlignment = "Left",
-				TextColor3 = Theme["Color Text"],
-				TextSize = 15,
-				Position = UDim2.fromOffset(15, 5),
-				BackgroundTransparency = 1
-			}), "Text"),
-			InsertTheme(Create("TextLabel", {
-				Font = Enum.Font.GothamMedium,
-				Size = UDim2.new(1, -25),
-				AutomaticSize = "Y",
-				Text = DText,
-				TextXAlignment = "Left",
-				TextColor3 = Theme["Color Dark Text"],
-				TextSize = 12,
-				Position = UDim2.fromOffset(15, 25),
-				BackgroundTransparency = 1,
-				TextWrapped = true
-			}), "DarkText")
-		})Make("Gradient", Frame, {Rotation = 270})Make("Corner", Frame)
-		
-		local ButtonsHolder = Create("Frame", Frame, {
-			Size = UDim2.fromScale(1, 0.35),
-			Position = UDim2.fromScale(0, 1),
-			AnchorPoint = Vector2.new(0, 1),
-			BackgroundColor3 = Theme["Color Hub 2"],
-			BackgroundTransparency = 1
-		}, {
-			Create("UIListLayout", {
-				Padding = UDim.new(0, 10),
-				VerticalAlignment = "Center",
-				FillDirection = "Horizontal",
-				HorizontalAlignment = "Center"
-			})
-		})
-		
-		local Screen = InsertTheme(Create("Frame", MainFrame, {
-			BackgroundTransparency = 0.6,
-			Active = true,
-			BackgroundColor3 = Theme["Color Hub 2"],
-			Size = UDim2.new(1, 0, 1, 0),
-			BackgroundColor3 = Theme["Color Stroke"],
-			Name = "Dialog"
-		}), "Stroke")
-		
-		MainCorner:Clone().Parent = Screen
-		Frame.Parent = Screen
-		CreateTween({Frame, "Size", UDim2.fromOffset(250, 150), 0.2})
-		CreateTween({Frame, "Transparency", 0, 0.15})
-		CreateTween({Screen, "Transparency", 0.3, 0.15})
-		
-		local ButtonCount, Dialog = 1, {}
-		function Dialog:Button(Configs)
-			local Name = Configs[1] or Configs.Name or Configs.Title or ""
-			local Callback = Configs[2] or Configs.Callback or function()end
-			
-			ButtonCount = ButtonCount + 1
-			local Button = Make("Button", ButtonsHolder)
-			Make("Corner", Button)
-			SetProps(Button, {
-				Text = Name,
-				Font = Enum.Font.GothamBold,
-				TextColor3 = Theme["Color Text"],
-				TextSize = 12
-			})
-			
-			for _,Button in pairs(ButtonsHolder:GetChildren()) do
-				if Button:IsA("TextButton") then
-					Button.Size = UDim2.new(1 / ButtonCount, -(((ButtonCount - 1) * 20) / ButtonCount), 0, 32) -- Fluent Library :)
-				end
-			end
-			Button.Activated:Connect(Dialog.Close)
-			Button.Activated:Connect(Callback)
-		end
-		function Dialog:Close()
-			CreateTween({Frame, "Size", UDim2.fromOffset(250 * 1.08, 150 * 1.08), 0.2})
-			CreateTween({Screen, "Transparency", 1, 0.15})
-			CreateTween({Frame, "Transparency", 1, 0.15, true})
-			Screen:Destroy()
-		end
-		for k,v in pairs(DOptions, function(_,Button)
-			Dialog:Button(Button)
+
+	tweenService:Create(data.object.Progress, TweenInfo.new(.5, Enum.EasingStyle.Quint), {Size = UDim2.new(inverse_interpolation, 0, 1, 0)}):Play()
+
+	local value = math.floor(data.values[1] + (data.values[2] - data.values[1]) * inverse_interpolation + .5)
+	data.object.Information.Text = value.." "..data.name
+	data.value = value
+
+	if data.callback and not setValue or forceValue then
+		data.callback(value)
+	end
+end
+
+local function resetSliders()
+	for _, v in pairs(siriusValues.sliders) do
+		updateSlider(v, v.default, true)
+	end
+end
+
+local function sortActions()	
+	characterPanel.Interactions.Grid.Template.Visible = false
+	characterPanel.Interactions.Sliders.Template.Visible = false
+
+	for _, action in ipairs(siriusValues.actions) do
+		local newAction = characterPanel.Interactions.Grid.Template:Clone()
+		newAction.Name = action.name
+		newAction.Parent = characterPanel.Interactions.Grid
+		newAction.BackgroundColor3 = action.color
+		newAction.UIStroke.Color = action.color
+		newAction.Icon.Image = "rbxassetid://"..action.images[2]
+		newAction.Visible = true
+
+		newAction.BackgroundTransparency = 0.8
+		newAction.Transparency = 0.7
+
+
+		newAction.MouseEnter:Connect(function()
+			characterPanel.Interactions.ActionsTitle.Text = string.upper(action.name)
+			if action.enabled or debounce then return end
+			tweenService:Create(newAction, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.4}):Play()
+			tweenService:Create(newAction.UIStroke, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {Transparency = 0.6}):Play()
 		end)
-		return Dialog
-	end
-	function Window:SelectTab(TabSelect)
-		if type(TabSelect) == "number" then
-			redzlib.Tabs[TabSelect].func:Enable()
-		else
-			for _,Tab in pairs(redzlib.Tabs) do
-				if Tab.Cont == TabSelect.Cont then
-					Tab.func:Enable()
-				end
-			end
-		end
-	end
-	
-	local ContainerList = {}
-	function Window:MakeTab(paste, Configs)
-		if type(paste) == "table" then Configs = paste end
-		local TName = Configs[1] or Configs.Title or "Tab!"
-		local TIcon = Configs[2] or Configs.Icon or ""
-		
-		TIcon = redzlib:GetIcon(TIcon)
-		if not TIcon:find("rbxassetid://") or TIcon:gsub("rbxassetid://", ""):len() < 6 then
-			TIcon = false
-		end
-		
-		local TabSelect = Make("Button", MainScroll, {
-			Size = UDim2.new(1, 0, 0, 24)
-		})Make("Corner", TabSelect)
-		
-		local LabelTitle = InsertTheme(Create("TextLabel", TabSelect, {
-			Size = UDim2.new(1, TIcon and -25 or -15, 1),
-			Position = UDim2.fromOffset(TIcon and 25 or 15),
-			BackgroundTransparency = 1,
-			Font = Enum.Font.GothamMedium,
-			Text = TName,
-			TextColor3 = Theme["Color Text"],
-			TextSize = 10,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextTransparency = (FirstTab and 0.3) or 0,
-			TextTruncate = "AtEnd"
-		}), "Text")
-		
-		local LabelIcon = InsertTheme(Create("ImageLabel", TabSelect, {
-			Position = UDim2.new(0, 8, 0.5),
-			Size = UDim2.new(0, 13, 0, 13),
-			AnchorPoint = Vector2.new(0, 0.5),
-			Image = TIcon or "",
-			BackgroundTransparency = 1,
-			ImageTransparency = (FirstTab and 0.3) or 0
-		}), "Text")
-		
-		local Selected = InsertTheme(Create("Frame", TabSelect, {
-			Size = FirstTab and UDim2.new(0, 4, 0, 4) or UDim2.new(0, 4, 0, 13),
-			Position = UDim2.new(0, 1, 0.5),
-			AnchorPoint = Vector2.new(0, 0.5),
-			BackgroundColor3 = Theme["Color Theme"],
-			BackgroundTransparency = FirstTab and 1 or 0
-		}), "Theme")Make("Corner", Selected, UDim.new(0.5, 0))
-		
-		local Container = InsertTheme(Create("ScrollingFrame", {
-			Size = UDim2.new(1, 0, 1, 0),
-			Position = UDim2.new(0, 0, 1),
-			AnchorPoint = Vector2.new(0, 1),
-			ScrollBarThickness = 1.5,
-			BackgroundTransparency = 1,
-			ScrollBarImageTransparency = 0.2,
-			ScrollBarImageColor3 = Theme["Color Theme"],
-			AutomaticCanvasSize = "Y",
-			ScrollingDirection = "Y",
-			BorderSizePixel = 0,
-			CanvasSize = UDim2.new(),
-			Name = ("Container %i [ %s ]"):format(#ContainerList + 1, TName)
-		}, {
-			Create("UIPadding", {
-				PaddingLeft = UDim.new(0, 10),
-				PaddingRight = UDim.new(0, 10),
-				PaddingTop = UDim.new(0, 10),
-				PaddingBottom = UDim.new(0, 10)
-			}), Create("UIListLayout", {
-				Padding = UDim.new(0, 5)
-			})
-		}), "ScrollBar")
-		
-		table.insert(ContainerList, Container)
-		
-		if not FirstTab then Container.Parent = Containers end
-		
-		local function Tabs()
-			if Container.Parent then return end
-			for _,Frame in pairs(ContainerList) do
-				if Frame:IsA("ScrollingFrame") and Frame ~= Container then
-					Frame.Parent = nil
-				end
-			end
-			Container.Parent = Containers
-			Container.Size = UDim2.new(1, 0, 1, 150)
-			for k,v in pairs(redzlib.Tabs, function(_,Tab)
-				if Tab.Cont ~= Container then
-					Tab.func:Disable()
-				end
-			end)
-			CreateTween({Container, "Size", UDim2.new(1, 0, 1, 0), 0.3})
-			CreateTween({LabelTitle, "TextTransparency", 0, 0.35})
-			CreateTween({LabelIcon, "ImageTransparency", 0, 0.35})
-			CreateTween({Selected, "Size", UDim2.new(0, 4, 0, 13), 0.35})
-			CreateTween({Selected, "BackgroundTransparency", 0, 0.35})
-		end
-		TabSelect.Activated:Connect(Tabs)
-		
-		FirstTab = true
-		local Tab = {}
-		table.insert(redzlib.Tabs, {TabInfo = {Name = TName, Icon = TIcon}, func = Tab, Cont = Container})
-		Tab.Cont = Container
-		
-		function Tab:Disable()
-			Container.Parent = nil
-			CreateTween({LabelTitle, "TextTransparency", 0.3, 0.35})
-			CreateTween({LabelIcon, "ImageTransparency", 0.3, 0.35})
-			CreateTween({Selected, "Size", UDim2.new(0, 4, 0, 4), 0.35})
-			CreateTween({Selected, "BackgroundTransparency", 1, 0.35})
-		end
-		function Tab:Enable()
-			Tabs()
-		end
-		function Tab:Visible(Bool)
-			Funcs:ToggleVisible(TabSelect, Bool)
-			Funcs:ToggleParent(Container, Bool, Containers)
-		end
-		function Tab:Destroy() TabSelect:Destroy() Container:Destroy() end
-		
-		function Tab:AddSection(Configs)
-			local SectionName = type(Configs) == "string" and Configs or Configs[1] or Configs.Name or Configs.Title or Configs.Section
-			
-			local SectionFrame = Create("Frame", Container, {
-				Size = UDim2.new(1, 0, 0, 20),
-				BackgroundTransparency = 1,
-				Name = "Option"
-			})
-			
-			local SectionLabel = InsertTheme(Create("TextLabel", SectionFrame, {
-				Font = Enum.Font.GothamBold,
-				Text = SectionName,
-				TextColor3 = Theme["Color Text"],
-				Size = UDim2.new(1, -25, 1, 0),
-				Position = UDim2.new(0, 5),
-				BackgroundTransparency = 1,
-				TextTruncate = "AtEnd",
-				TextSize = 14,
-				TextXAlignment = "Left"
-			}), "Text")
-			
-			local Section = {}
-			table.insert(redzlib.Options, {type = "Section", Name = SectionName, func = Section})
-			function Section:Visible(Bool)
-				if Bool == nil then SectionFrame.Visible = not SectionFrame.Visible return end
-				SectionFrame.Visible = Bool
-			end
-			function Section:Destroy()
-				SectionFrame:Destroy()
-			end
-			function Section:Set(New)
-				if New then
-					SectionLabel.Text = GetStr(New)
-				end
-			end
-			return Section
-		end
-		function Tab:AddParagraph(Configs)
-			local PName = Configs[1] or Configs.Title or "Paragraph"
-			local PDesc = Configs[2] or Configs.Text or ""
-			
-			local Frame, LabelFunc = ButtonFrame(Container, PName, PDesc, UDim2.new(1, -20))
-			
-			local Paragraph = {}
-			function Paragraph:Visible(...) Funcs:ToggleVisible(Frame, ...) end
-			function Paragraph:Destroy() Frame:Destroy() end
-			function Paragraph:SetTitle(Val)
-				LabelFunc:SetTitle(GetStr(Val))
-			end
-			function Paragraph:SetDesc(Val)
-				LabelFunc:SetDesc(GetStr(Val))
-			end
-			function Paragraph:Set(Val1, Val2)
-				if Val1 and Val2 then
-					LabelFunc:SetTitle(GetStr(Val1))
-					LabelFunc:SetDesc(GetStr(Val2))
-				elseif Val1 then
-					LabelFunc:SetDesc(GetStr(Val1))
-				end
-			end
-			return Paragraph
-		end
-		function Tab:AddButton(Configs)
-			local BName = Configs[1] or Configs.Name or Configs.Title or "Button!"
-			local BDescription = Configs.Desc or Configs.Description or ""
-			local Callback = Funcs:GetCallback(Configs, 2)
-			
-			local FButton, LabelFunc = ButtonFrame(Container, BName, BDescription, UDim2.new(1, -20))
-			
-			local ButtonIcon = Create("ImageLabel", FButton, {
-				Size = UDim2.new(0, 14, 0, 14),
-				Position = UDim2.new(1, -10, 0.5),
-				AnchorPoint = Vector2.new(1, 0.5),
-				BackgroundTransparency = 1,
-				Image = "rbxassetid://10709791437"
-			})
-			
-			FButton.Activated:Connect(function()
-				Funcs:FireCallback(Callback)
-			end)
-			
-			local Button = {}
-			function Button:Visible(...) Funcs:ToggleVisible(FButton, ...) end
-			function Button:Destroy() FButton:Destroy() end
-			function Button:Callback(...) Funcs:InsertCallback(Callback, ...) end
-			function Button:Set(Val1, Val2)
-				if type(Val1) == "string" and type(Val2) == "string" then
-					LabelFunc:SetTitle(Val1)
-					LabelFunc:SetDesc(Val2)
-				elseif type(Val1) == "string" then
-					LabelFunc:SetTitle(Val1)
-				elseif type(Val1) == "function" then
-					Callback = Val1
-				end
-			end
-			return Button
-		end
-		function Tab:AddToggle(Configs)
-			local TName = Configs[1] or Configs.Name or Configs.Title or "Toggle"
-			local TDesc = Configs.Desc or Configs.Description or ""
-			local Callback = Funcs:GetCallback(Configs, 3)
-			local Flag = Configs[4] or Configs.Flag or false
-			local Default = Configs[2] or Configs.Default or false
-			if CheckFlag(Flag) then Default = GetFlag(Flag) end
-			
-			local Button, LabelFunc = ButtonFrame(Container, TName, TDesc, UDim2.new(1, -38))
-			
-			local ToggleHolder = InsertTheme(Create("Frame", Button, {
-				Size = UDim2.new(0, 35, 0, 18),
-				Position = UDim2.new(1, -10, 0.5),
-				AnchorPoint = Vector2.new(1, 0.5),
-				BackgroundColor3 = Theme["Color Stroke"]
-			}), "Stroke")Make("Corner", ToggleHolder, UDim.new(0.5, 0))
-			
-			local Slider = Create("Frame", ToggleHolder, {
-				BackgroundTransparency = 1,
-				Size = UDim2.new(0.8, 0, 0.8, 0),
-				Position = UDim2.new(0.5, 0, 0.5, 0),
-				AnchorPoint = Vector2.new(0.5, 0.5)
-			})
-			
-			local Toggle = InsertTheme(Create("Frame", Slider, {
-				Size = UDim2.new(0, 12, 0, 12),
-				Position = UDim2.new(0, 0, 0.5),
-				AnchorPoint = Vector2.new(0, 0.5),
-				BackgroundColor3 = Theme["Color Theme"]
-			}), "Theme")Make("Corner", Toggle, UDim.new(0.5, 0))
-			
-			local WaitClick
-			local function SetToggle(Val)
-				if WaitClick then return end
-				
-				WaitClick, Default = true, Val
-				SetFlag(Flag, Default)
-				Funcs:FireCallback(Callback, Default)
-				if Default then
-					CreateTween({Toggle, "Position", UDim2.new(1, 0, 0.5), 0.25})
-					CreateTween({Toggle, "BackgroundTransparency", 0, 0.25})
-					CreateTween({Toggle, "AnchorPoint", Vector2.new(1, 0.5), 0.25, Wait or false})
-				else
-					CreateTween({Toggle, "Position", UDim2.new(0, 0, 0.5), 0.25})
-					CreateTween({Toggle, "BackgroundTransparency", 0.8, 0.25})
-					CreateTween({Toggle, "AnchorPoint", Vector2.new(0, 0.5), 0.25, Wait or false})
-				end
-				WaitClick = false
-			end;task.spawn(SetToggle, Default)
-			
-			Button.Activated:Connect(function()
-				SetToggle(not Default)
-			end)
-			
-			local Toggle = {}
-			function Toggle:Visible(...) Funcs:ToggleVisible(Button, ...) end
-			function Toggle:Destroy() Button:Destroy() end
-			function Toggle:Callback(...) Funcs:InsertCallback(Callback, ...)() end
-			function Toggle:Set(Val1, Val2)
-				if type(Val1) == "string" and type(Val2) == "string" then
-					LabelFunc:SetTitle(Val1)
-					LabelFunc:SetDesc(Val2)
-				elseif type(Val1) == "string" then
-					LabelFunc:SetTitle(Val1, false, true)
-				elseif type(Val1) == "boolean" then
-					if WaitClick and Val2 then
-						repeat task.wait() until not WaitClick
+
+		newAction.MouseLeave:Connect(function()
+			if action.enabled or debounce then return end
+			tweenService:Create(newAction, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.55}):Play()
+			tweenService:Create(newAction.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
+		end)
+
+		characterPanel.Interactions.Grid.MouseLeave:Connect(function()
+			characterPanel.Interactions.ActionsTitle.Text = "PLAYER ACTIONS"
+		end)
+
+		newAction.Interact.MouseButton1Click:Connect(function()
+			local success, response = pcall(function()
+				action.enabled = not action.enabled
+				action.callback(action.enabled)
+
+				if action.enabled then
+					newAction.Icon.Image = "rbxassetid://"..action.images[1]
+					tweenService:Create(newAction, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.1}):Play()
+					tweenService:Create(newAction.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+					tweenService:Create(newAction.Icon, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {ImageTransparency = 0.1}):Play()
+
+					if action.disableAfter then
+						task.delay(action.disableAfter, function()
+							action.enabled = false
+							newAction.Icon.Image = "rbxassetid://"..action.images[2]
+							tweenService:Create(newAction, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.55}):Play()
+							tweenService:Create(newAction.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
+							tweenService:Create(newAction.Icon, TweenInfo.new(0.25, Enum.EasingStyle.Quint), {ImageTransparency = 0.5}):Play()
+						end)
 					end
-					task.spawn(SetToggle, Val1)
-				elseif type(Val1) == "function" then
-					Callback = Val1
+
+					if action.rotateWhileEnabled then
+						repeat
+							newAction.Icon.Rotation = 0
+							tweenService:Create(newAction.Icon, TweenInfo.new(0.75, Enum.EasingStyle.Quint), {Rotation = 360}):Play()
+							task.wait(1)
+						until not action.enabled
+						newAction.Icon.Rotation = 0
+					end
+				else
+					newAction.Icon.Image = "rbxassetid://"..action.images[2]
+					tweenService:Create(newAction, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.55}):Play()
+					tweenService:Create(newAction.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
+					tweenService:Create(newAction.Icon, TweenInfo.new(0.25, Enum.EasingStyle.Quint), {ImageTransparency = 0.5}):Play()
+				end
+			end)
+
+			if not success then
+				queueNotification("Action Error", "This action ('"..(action.name).."') had an error while running, please report this to the Sirius team at sirius.menu/discord", 4370336704)
+				action.enabled = false
+				newAction.Icon.Image = "rbxassetid://"..action.images[2]
+				tweenService:Create(newAction, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.55}):Play()
+				tweenService:Create(newAction.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
+				tweenService:Create(newAction.Icon, TweenInfo.new(0.25, Enum.EasingStyle.Quint), {ImageTransparency = 0.5}):Play()
+			end
+		end)
+	end
+
+	if localPlayer.Character then
+		if not localPlayer.Character:FindFirstChildOfClass('Humanoid').UseJumpPower then
+			siriusValues.sliders[2].name = "jump height"
+			siriusValues.sliders[2].default = 7.2
+			siriusValues.sliders[2].values = {0, 120}
+		end
+	end
+
+
+	for _, slider in ipairs(siriusValues.sliders) do
+		local newSlider = characterPanel.Interactions.Sliders.Template:Clone()
+		newSlider.Name = slider.name.." Slider"
+		newSlider.Parent = characterPanel.Interactions.Sliders
+		newSlider.BackgroundColor3 = slider.color
+		newSlider.Progress.BackgroundColor3 = slider.color
+		newSlider.UIStroke.Color = slider.color
+		newSlider.Information.Text = slider.name
+		newSlider.Visible = true
+
+		slider.object = newSlider
+
+		slider.padding = {
+			newSlider.Interact.AbsolutePosition.X,
+			newSlider.Interact.AbsolutePosition.X + newSlider.Interact.AbsoluteSize.X
+		}
+
+		newSlider.MouseEnter:Connect(function()
+			if debounce or slider.active then return end
+			tweenService:Create(newSlider, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.85}):Play()
+			tweenService:Create(newSlider.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0.6}):Play()
+			tweenService:Create(newSlider.Information, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {TextTransparency = 0.2}):Play()
+		end)
+
+		newSlider.MouseLeave:Connect(function()
+			if debounce or slider.active then return end
+			tweenService:Create(newSlider, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.8}):Play()
+			tweenService:Create(newSlider.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0.5}):Play()
+			tweenService:Create(newSlider.Information, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {TextTransparency = 0.3}):Play()
+		end)
+
+		newSlider.Interact.MouseButton1Down:Connect(function()
+			if debounce or not checkSirius() then return end
+
+			slider.active = true
+			updateSlider(slider)
+
+			tweenService:Create(slider.object, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.9}):Play()
+			tweenService:Create(slider.object.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
+			tweenService:Create(slider.object.Information, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {TextTransparency = 0.05}):Play()
+		end)
+
+		updateSlider(slider, slider.default)
+	end
+end
+
+local function getAdaptiveHighPingThreshold()
+	local adaptiveBaselinePings = siriusValues.pingProfile.adaptiveBaselinePings
+
+	if #adaptiveBaselinePings == 0 then
+		return siriusValues.pingProfile.adaptiveHighPingThreshold
+	end
+
+	table.sort(adaptiveBaselinePings)
+	local median
+	if #adaptiveBaselinePings % 2 == 0 then
+		median = (adaptiveBaselinePings[#adaptiveBaselinePings/2] + adaptiveBaselinePings[#adaptiveBaselinePings/2 + 1]) / 2
+	else
+		median = adaptiveBaselinePings[math.ceil(#adaptiveBaselinePings/2)]
+	end
+
+	return median * siriusValues.pingProfile.spikeThreshold
+end
+
+local function checkHighPing()
+	local recentPings = siriusValues.pingProfile.recentPings
+	local adaptiveBaselinePings = siriusValues.pingProfile.adaptiveBaselinePings
+
+	local currentPing = getPing()
+	table.insert(recentPings, currentPing)
+
+	if #recentPings > siriusValues.pingProfile.maxSamples then
+		table.remove(recentPings, 1)
+	end
+
+	if #adaptiveBaselinePings < siriusValues.pingProfile.adaptiveBaselineSamples then
+		if currentPing >= 350 then currentPing = 300 end
+
+		table.insert(adaptiveBaselinePings, currentPing)
+
+		return false
+	end
+
+	local averagePing = 0
+	for _, ping in ipairs(recentPings) do
+		averagePing = averagePing + ping
+	end
+	averagePing = averagePing / #recentPings
+
+	if averagePing > getAdaptiveHighPingThreshold() then
+		return true
+	end
+
+	return false
+end
+
+local function checkTools()
+	task.wait(0.03)
+	if localPlayer.Backpack and localPlayer.Character then
+		if localPlayer.Backpack:FindFirstChildOfClass('Tool') or localPlayer.Character:FindFirstChildOfClass('Tool') then
+			return true
+		end
+	else
+		return false
+	end
+end
+
+local function closePanel(panelName, openingOther)
+	debounce = true
+
+	local button = smartBar.Buttons:FindFirstChild(panelName)
+	local panel = UI:FindFirstChild(panelName)
+
+	if not isPanel(panelName) then return end
+	if not (panel and button) then return end
+
+	local panelSize = UDim2.new(0, 581, 0, 246)
+
+	if not openingOther then
+		if panel.Name == "Character" then -- Character Panel Animation
+
+			tweenService:Create(characterPanel.Interactions.PropertiesTitle, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+
+			for _, slider in ipairs(characterPanel.Interactions.Sliders:GetChildren()) do
+				if slider.ClassName == "Frame" then 
+					tweenService:Create(slider, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+					tweenService:Create(slider.Progress, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+					tweenService:Create(slider.UIStroke, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+					tweenService:Create(slider.Shadow, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+					tweenService:Create(slider.Information, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play() -- tween the text after
 				end
 			end
-			return Toggle
+
+			tweenService:Create(characterPanel.Interactions.Reset, TweenInfo.new(0.25, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+			tweenService:Create(characterPanel.Interactions.ActionsTitle, TweenInfo.new(0.25, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+
+			for _, gridButton in ipairs(characterPanel.Interactions.Grid:GetChildren()) do
+				if gridButton.ClassName == "Frame" then 
+					tweenService:Create(gridButton, TweenInfo.new(0.21, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play()
+					tweenService:Create(gridButton.UIStroke, TweenInfo.new(0.1, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
+					tweenService:Create(gridButton.Icon, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+					tweenService:Create(gridButton.Shadow, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+				end
+			end
+
+			tweenService:Create(characterPanel.Interactions.Serverhop, TweenInfo.new(.15,Enum.EasingStyle.Quint),  {BackgroundTransparency = 1}):Play()
+			tweenService:Create(characterPanel.Interactions.Serverhop.Title, TweenInfo.new(.15,Enum.EasingStyle.Quint),  {TextTransparency = 1}):Play()
+			tweenService:Create(characterPanel.Interactions.Serverhop.UIStroke, TweenInfo.new(.15,Enum.EasingStyle.Quint),  {Transparency = 1}):Play()
+
+			tweenService:Create(characterPanel.Interactions.Rejoin, TweenInfo.new(.15,Enum.EasingStyle.Quint),  {BackgroundTransparency = 1}):Play()
+			tweenService:Create(characterPanel.Interactions.Rejoin.Title, TweenInfo.new(.15,Enum.EasingStyle.Quint),  {TextTransparency = 1}):Play()
+			tweenService:Create(characterPanel.Interactions.Rejoin.UIStroke, TweenInfo.new(.15,Enum.EasingStyle.Quint),  {Transparency = 1}):Play()
+
+		elseif panel.Name == "Scripts" then -- Scripts Panel Animation
+
+			for _, scriptButton in ipairs(scriptsPanel.Interactions.Selection:GetChildren()) do
+				if scriptButton.ClassName == "Frame" then
+					tweenService:Create(scriptButton, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+					if scriptButton:FindFirstChild('Icon') then tweenService:Create(scriptButton.Icon, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play() end
+					tweenService:Create(scriptButton.Title, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+					if scriptButton:FindFirstChild('Subtitle') then	tweenService:Create(scriptButton.Subtitle, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play() end
+					tweenService:Create(scriptButton.UIStroke, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+				end
+			end
+
+		elseif panel.Name == "Playerlist" then -- Playerlist Panel Animation
+
+			for _, playerIns in ipairs(playerlistPanel.Interactions.List:GetDescendants()) do
+				if playerIns.ClassName == "Frame" then
+					tweenService:Create(playerIns, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+				elseif playerIns.ClassName == "TextLabel" or playerIns.ClassName == "TextButton" then
+					if playerIns.Name == "DisplayName" then
+						tweenService:Create(playerIns, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+					else
+						tweenService:Create(playerIns, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+					end
+				elseif playerIns.ClassName == "ImageLabel" or playerIns.ClassName == "ImageButton" then
+					tweenService:Create(playerIns, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+					if playerIns.Name == "Avatar" then tweenService:Create(playerIns, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play() end
+				elseif playerIns.ClassName == "UIStroke" then
+					tweenService:Create(playerIns, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+				end
+			end
+
+			tweenService:Create(playerlistPanel.Interactions.SearchFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+			tweenService:Create(playerlistPanel.Interactions.SearchFrame.Icon, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+			tweenService:Create(playerlistPanel.Interactions.SearchFrame.SearchBox, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+			tweenService:Create(playerlistPanel.Interactions.SearchFrame.UIStroke, TweenInfo.new(0.15, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+			tweenService:Create(playerlistPanel.Interactions.List, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {ScrollBarImageTransparency = 1}):Play()
+
 		end
-		function Tab:AddDropdown(Configs)
-			local DName = Configs[1] or Configs.Name or Configs.Title or "Dropdown"
-			local DDesc = Configs.Desc or Configs.Description or ""
-			local DOptions = Configs[2] or Configs.Options or {}
-			local OpDefault = Configs[3] or Configs.Default or {}
-			local Flag = Configs[5] or Configs.Flag or false
-			local DMultiSelect = Configs.MultiSelect or false
-			local Callback = Funcs:GetCallback(Configs, 4)
-			
-			local Button, LabelFunc = ButtonFrame(Container, DName, DDesc, UDim2.new(1, -180))
-			
-			local SelectedFrame = InsertTheme(Create("Frame", Button, {
-				Size = UDim2.new(0, 150, 0, 18),
-				Position = UDim2.new(1, -10, 0.5),
-				AnchorPoint = Vector2.new(1, 0.5),
-				BackgroundColor3 = Theme["Color Stroke"]
-			}), "Stroke")Make("Corner", SelectedFrame, UDim.new(0, 4))
-			
-			local ActiveLabel = InsertTheme(Create("TextLabel", SelectedFrame, {
-				Size = UDim2.new(0.85, 0, 0.85, 0),
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.new(0.5, 0, 0.5, 0),
-				BackgroundTransparency = 1,
-				Font = Enum.Font.GothamBold,
-				TextScaled = true,
-				TextColor3 = Theme["Color Text"],
-				Text = "..."
-			}), "Text")
-			
-			local Arrow = Create("ImageLabel", SelectedFrame, {
-				Size = UDim2.new(0, 15, 0, 15),
-				Position = UDim2.new(0, -5, 0.5),
-				AnchorPoint = Vector2.new(1, 0.5),
-				Image = "rbxassetid://10709791523",
-				BackgroundTransparency = 1
-			})
-			
-			local NoClickFrame = Create("TextButton", DropdownHolder, {
-				Name = "AntiClick",
-				Size = UDim2.new(1, 0, 1, 0),
-				BackgroundTransparency = 1,
-				Visible = false,
-				Text = ""
-			})
-			
-			local DropFrame = Create("Frame", NoClickFrame, {
-				Size = UDim2.new(SelectedFrame.Size.X, 0, 0),
-				BackgroundTransparency = 0.1,
-				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-				AnchorPoint = Vector2.new(0, 1),
-				Name = "DropdownFrame",
-				ClipsDescendants = true,
-				Active = true
-			})Make("Corner", DropFrame)Make("Stroke", DropFrame)Make("Gradient", DropFrame, {Rotation = 60})
-			
-			local ScrollFrame = InsertTheme(Create("ScrollingFrame", DropFrame, {
-				ScrollBarImageColor3 = Theme["Color Theme"],
-				Size = UDim2.new(1, 0, 1, 0),
-				ScrollBarThickness = 1.5,
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				CanvasSize = UDim2.new(),
-				ScrollingDirection = "Y",
-				AutomaticCanvasSize = "Y",
-				Active = true
-			}, {
-				Create("UIPadding", {
-					PaddingLeft = UDim.new(0, 8),
-					PaddingRight = UDim.new(0, 8),
-					PaddingTop = UDim.new(0, 5),
-					PaddingBottom = UDim.new(0, 5)
-				}), Create("UIListLayout", {
-					Padding = UDim.new(0, 4)
-				})
-			}), "ScrollBar")
-			
-			local ScrollSize, WaitClick = 5
-			local function Disable()
-				WaitClick = true
-				CreateTween({Arrow, "Rotation", 0, 0.2})
-				CreateTween({DropFrame, "Size", UDim2.new(0, 152, 0, 0), 0.2, true})
-				CreateTween({Arrow, "ImageColor3", Color3.fromRGB(255, 255, 255), 0.2})
-				Arrow.Image = "rbxassetid://10709791523"
-				NoClickFrame.Visible = false
-				WaitClick = false
+
+		tweenService:Create(panel.Icon, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+		tweenService:Create(panel.Title, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+		tweenService:Create(panel.UIStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+		tweenService:Create(panel.Shadow, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+		task.wait(0.03)
+
+		tweenService:Create(panel, TweenInfo.new(0.75, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut), {BackgroundTransparency = 1}):Play()
+		tweenService:Create(panel, TweenInfo.new(1.1, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Size = button.Size}):Play()
+		tweenService:Create(panel, TweenInfo.new(0.65, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {Position = siriusValues.buttonPositions[panelName]}):Play()
+		tweenService:Create(toggle, TweenInfo.new(0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {Position = UDim2.new(0.5, 0, 1, -85)}):Play()
+	end
+
+	-- Animate interactive elements
+	if openingOther then
+		tweenService:Create(panel, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {Position = UDim2.new(0.5, 350, 1, -90)}):Play()
+		wipeTransparency(panel, 1, true, true, 0.3)
+	end
+
+	task.wait(0.5)
+	panel.Size = panelSize
+	panel.Visible = false
+
+	debounce = false
+end
+
+local function openPanel(panelName)
+	if debounce then return end
+	debounce = true
+
+	local button = smartBar.Buttons:FindFirstChild(panelName)
+	local panel = UI:FindFirstChild(panelName)
+
+	if not isPanel(panelName) then return end
+	if not (panel and button) then return end
+
+	for _, otherPanel in ipairs(UI:GetChildren()) do
+		if smartBar.Buttons:FindFirstChild(otherPanel.Name) then
+			if isPanel(otherPanel.Name) and otherPanel.Visible then
+				task.spawn(closePanel, otherPanel.Name, true)
+				task.wait()
 			end
-			
-			local function GetFrameSize()
-				return UDim2.fromOffset(152, ScrollSize)
+		end
+	end
+
+	local panelSize = UDim2.new(0, 581, 0, 246)
+
+	panel.Size = button.Size
+	panel.Position = siriusValues.buttonPositions[panelName]
+
+	wipeTransparency(panel, 1, true)
+
+	panel.Visible = true
+
+	tweenService:Create(toggle, TweenInfo.new(0.65, Enum.EasingStyle.Quint), {Position = UDim2.new(0.5, 0, 1, -(panelSize.Y.Offset + 95))}):Play()
+
+	tweenService:Create(panel, TweenInfo.new(0.1, Enum.EasingStyle.Quint), {BackgroundTransparency = 0}):Play()
+	tweenService:Create(panel, TweenInfo.new(0.8, Enum.EasingStyle.Exponential), {Size = panelSize}):Play()
+	tweenService:Create(panel, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0.5, 0, 1, -90)}):Play()
+	task.wait(0.1)
+	tweenService:Create(panel.Shadow, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {ImageTransparency = 0.7}):Play()
+	tweenService:Create(panel.Icon, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {ImageTransparency = 0}):Play()
+	task.wait(0.05)
+	tweenService:Create(panel.Title, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+	tweenService:Create(panel.UIStroke, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {Transparency = 0.95}):Play()
+	task.wait(0.05)
+
+	-- Animate interactive elements
+	if panel.Name == "Character" then -- Character Panel Animation
+
+		tweenService:Create(characterPanel.Interactions.PropertiesTitle, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {TextTransparency = 0.65}):Play()
+
+		local sliderInfo = {}
+		for _, slider in ipairs(characterPanel.Interactions.Sliders:GetChildren()) do
+			if slider.ClassName == "Frame" then 
+				table.insert(sliderInfo, {slider.Name, slider.Progress.Size, slider.Information.Text})
+				slider.Progress.Size = UDim2.new(0, 0, 1, 0)
+				slider.Progress.BackgroundTransparency = 0
+
+				tweenService:Create(slider, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.8}):Play()
+				tweenService:Create(slider.UIStroke, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {Transparency = 0.5}):Play()
+				tweenService:Create(slider.Shadow, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {ImageTransparency = 0.6}):Play()
+				tweenService:Create(slider.Information, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {TextTransparency = 0.3}):Play()
 			end
-			
-			local function CalculateSize()
-				local Count = 0
-				for _,Frame in pairs(ScrollFrame:GetChildren()) do
-					if Frame:IsA("Frame") or Frame.Name == "Option" then
-						Count = Count + 1
+		end
+
+		for _, sliderV in pairs(sliderInfo) do
+			if characterPanel.Interactions.Sliders:FindFirstChild(sliderV[1]) then
+				local slider = characterPanel.Interactions.Sliders:FindFirstChild(sliderV[1])
+				local tweenValue = Instance.new("IntValue", UI)
+				local tweenTo
+				local name
+
+				for _, sliderFound in ipairs(siriusValues.sliders) do
+					if sliderFound.name.." Slider" == slider.Name then
+						tweenTo = sliderFound.value
+						name = sliderFound.name
+						break
 					end
 				end
-				ScrollSize = (math.clamp(Count, 0, 10) * 25) + 10
-				if NoClickFrame.Visible then
-					NoClickFrame.Visible = true
-					CreateTween({DropFrame, "Size", GetFrameSize(), 0.2, true})
+
+				tweenService:Create(slider.Progress, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {Size = sliderV[2]}):Play()
+
+				local function animateNumber(n)
+					tweenService:Create(tweenValue, TweenInfo.new(0.35, Enum.EasingStyle.Exponential), {Value = n}):Play()
+					task.delay(0.4, tweenValue.Destroy, tweenValue)
 				end
+
+				tweenValue:GetPropertyChangedSignal("Value"):Connect(function()
+					slider.Information.Text = tostring(tweenValue.Value).." "..name
+				end)
+
+				animateNumber(tweenTo)
 			end
-			
-			local function Minimize()
-				if WaitClick then return end
-				WaitClick = true
-				if NoClickFrame.Visible then
-					Arrow.Image = "rbxassetid://10709791523"
-					CreateTween({Arrow, "ImageColor3", Color3.fromRGB(255, 255, 255), 0.2})
-					CreateTween({DropFrame, "Size", UDim2.new(0, 152, 0, 0), 0.2, true})
-					NoClickFrame.Visible = false
-				else
-					NoClickFrame.Visible = true
-					Arrow.Image = "rbxassetid://10709790948"
-					CreateTween({Arrow, "ImageColor3", Theme["Color Theme"], 0.2})
-					CreateTween({DropFrame, "Size", GetFrameSize(), 0.2, true})
-				end
-				WaitClick = false
-			end
-			
-			local function CalculatePos()
-				local FramePos = SelectedFrame.AbsolutePosition
-				local ScreenSize = ScreenGui.AbsoluteSize
-				local ClampX = math.clamp((FramePos.X / UIScale), 0, ScreenSize.X / UIScale - DropFrame.Size.X.Offset)
-				local ClampY = math.clamp((FramePos.Y / UIScale) , 0, ScreenSize.Y / UIScale)
-				
-				local NewPos = UDim2.fromOffset(ClampX, ClampY)
-				local AnchorPoint = FramePos.Y > ScreenSize.Y / 1.4 and 1 or ScrollSize > 80 and 0.5 or 0
-				DropFrame.AnchorPoint = Vector2.new(0, AnchorPoint)
-				CreateTween({DropFrame, "Position", NewPos, 0.1})
-			end
-			
-			local AddNewOptions, GetOptions, AddOption, RemoveOption, Selected do
-				local Default = type(OpDefault) ~= "table" and {OpDefault} or OpDefault
-				local MultiSelect = DMultiSelect
-				local Options = {}
-				Selected = MultiSelect and {} or CheckFlag(Flag) and GetFlag(Flag) or Default[1]
-				
-				if MultiSelect then
-					for index, Value in pairs(CheckFlag(Flag) and GetFlag(Flag) or Default) do
-						if type(index) == "string" and (DOptions[index] or table.find(DOptions, index)) then
-							Selected[index] = Value
-						elseif DOptions[Value] then
-							Selected[Value] = true
+		end
+
+		tweenService:Create(characterPanel.Interactions.Reset, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {ImageTransparency = 0.7}):Play()
+		tweenService:Create(characterPanel.Interactions.ActionsTitle, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {TextTransparency = 0.65}):Play()
+
+		for _, gridButton in ipairs(characterPanel.Interactions.Grid:GetChildren()) do
+			if gridButton.ClassName == "Frame" then 
+				for _, action in ipairs(siriusValues.actions) do
+					if action.name == gridButton.Name then
+						if action.enabled then
+							tweenService:Create(gridButton, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.1}):Play()
+							tweenService:Create(gridButton.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+							tweenService:Create(gridButton.Icon, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {ImageTransparency = 0.1}):Play()
+						else
+							tweenService:Create(gridButton, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.55}):Play()
+							tweenService:Create(gridButton.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
+							tweenService:Create(gridButton.Icon, TweenInfo.new(0.25, Enum.EasingStyle.Quint), {ImageTransparency = 0.5}):Play()
 						end
+						break
 					end
 				end
-				
-				local function CallbackSelected()
-					SetFlag(Flag, MultiSelect and Selected or tostring(Selected))
-					Funcs:FireCallback(Callback, Selected)
+
+				tweenService:Create(gridButton.Shadow, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {ImageTransparency = 0.6}):Play()
+			end
+		end
+
+		tweenService:Create(characterPanel.Interactions.Serverhop, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {BackgroundTransparency = 0}):Play()
+		tweenService:Create(characterPanel.Interactions.Serverhop.Title, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 0.5}):Play()
+		tweenService:Create(characterPanel.Interactions.Serverhop.UIStroke, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {Transparency = 0}):Play()
+
+		tweenService:Create(characterPanel.Interactions.Rejoin, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {BackgroundTransparency = 0}):Play()
+		tweenService:Create(characterPanel.Interactions.Rejoin.Title, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 0.5}):Play()
+		tweenService:Create(characterPanel.Interactions.Rejoin.UIStroke, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {Transparency = 0}):Play()
+
+	elseif panel.Name == "Scripts" then -- Scripts Panel Animation
+
+		for _, scriptButton in ipairs(scriptsPanel.Interactions.Selection:GetChildren()) do
+			if scriptButton.ClassName == "Frame" then
+				tweenService:Create(scriptButton, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {BackgroundTransparency = 0}):Play()
+				if scriptButton:FindFirstChild('Icon') then tweenService:Create(scriptButton.Icon, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {ImageTransparency = 0}):Play() end
+				tweenService:Create(scriptButton.Title, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+				if scriptButton:FindFirstChild('Subtitle') then	tweenService:Create(scriptButton.Subtitle, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {TextTransparency = 0.3}):Play() end
+				tweenService:Create(scriptButton.UIStroke, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {Transparency = 0.2}):Play()
+			end
+		end
+
+	elseif panel.Name == "Playerlist" then -- Playerlist Panel Animation
+
+		for _, playerIns in ipairs(playerlistPanel.Interactions.List:GetDescendants()) do
+			if playerIns.Name ~= "Interact" and playerIns.Name ~= "Role" then 
+				if playerIns.ClassName == "Frame" then
+					tweenService:Create(playerIns, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {BackgroundTransparency = 0}):Play()
+				elseif playerIns.ClassName == "TextLabel" or playerIns.ClassName == "TextButton" then
+					tweenService:Create(playerIns, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+				elseif playerIns.ClassName == "ImageLabel" or playerIns.ClassName == "ImageButton" then
+					tweenService:Create(playerIns, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {ImageTransparency = 0}):Play()
+					if playerIns.Name == "Avatar" then tweenService:Create(playerIns, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {BackgroundTransparency = 0}):Play() end
+				elseif playerIns.ClassName == "UIStroke" then
+					tweenService:Create(playerIns, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {Transparency = 0}):Play()
 				end
-				
-				local function UpdateLabel()
-					if MultiSelect then
-						local list = {}
-						for index, Value in pairs(Selected) do
-							if Value then
-								table.insert(list, index)
+			end
+		end
+
+		tweenService:Create(playerlistPanel.Interactions.SearchFrame, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {BackgroundTransparency = 0}):Play()
+		tweenService:Create(playerlistPanel.Interactions.SearchFrame.Icon, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {ImageTransparency = 0}):Play()
+		task.wait(0.01)
+		tweenService:Create(playerlistPanel.Interactions.SearchFrame.SearchBox, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+		tweenService:Create(playerlistPanel.Interactions.SearchFrame.UIStroke, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {Transparency = 0.2}):Play()
+		task.wait(0.05)
+		tweenService:Create(playerlistPanel.Interactions.List, TweenInfo.new(0.35, Enum.EasingStyle.Quint), {ScrollBarImageTransparency = 0.7}):Play()
+
+	end
+
+	task.wait(0.45)
+	debounce = false
+end
+
+local function rejoin()
+	queueNotification("Rejoining Session", "We're queueing a rejoin to this session, give us a moment.", 4400696294)
+
+	if #players:GetPlayers() <= 1 then
+		task.wait()
+		teleportService:Teleport(placeId, localPlayer)
+	else
+		teleportService:TeleportToPlaceInstance(placeId, jobId, localPlayer)
+	end
+end
+
+local function serverhop()
+	local highestPlayers = 0
+	local servers = {}
+
+	for _, v in ipairs(httpService:JSONDecode(game:HttpGetAsync("https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100")).data) do
+		if type(v) == "table" and v.maxPlayers > v.playing and v.id ~= jobId then
+			if v.playing > highestPlayers then
+				highestPlayers = v.playing
+				servers[1] = v.id
+			end
+		end
+	end
+
+	if #servers > 0 then
+		queueNotification("Teleporting", "We're now moving you to the new session, this may take a few seconds.", 4335479121)
+		task.wait(0.3)
+		teleportService:TeleportToPlaceInstance(placeId, servers[1])
+	else
+		return queueNotification("No Servers Found", "We couldn't find another server, this may be the only server.", 4370317928)
+	end
+
+end
+
+local function ensureFrameProperties()
+	UI.Enabled = true
+	characterPanel.Visible = false
+	customScriptPrompt.Visible = false
+	disconnectedPrompt.Visible = false
+	playerlistPanel.Interactions.List.Template.Visible = false
+	gameDetectionPrompt.Visible = false
+	homeContainer.Visible = false
+	moderatorDetectionPrompt.Visible = false
+	musicPanel.Visible = false
+	notificationContainer.Visible = true
+	playerlistPanel.Visible = false
+	scriptSearch.Visible = false
+	scriptsPanel.Visible = false
+	settingsPanel.Visible = false
+	smartBar.Visible = false
+	musicPanel.Playing.Text = "Not Playing"
+	if not getcustomasset then smartBar.Buttons.Music.Visible = false end
+	toastsContainer.Visible = true
+	makeDraggable(settingsPanel)
+	makeDraggable(musicPanel)
+end
+
+local function checkFriends()
+	if friendsCooldown == 0 then
+
+		friendsCooldown = 25
+
+		local playersFriends = {}
+		local success, page = pcall(players.GetFriendsAsync, players, localPlayer.UserId)
+
+		if success then
+			repeat
+				local info = page:GetCurrentPage()
+				for i, friendInfo in pairs(info) do
+					table.insert(playersFriends, friendInfo)
+				end
+				if not page.IsFinished then 
+					page:AdvanceToNextPageAsync()
+				end
+			until page.IsFinished
+		end
+
+		local friendsInTotal = 0
+		local onlineFriends = 0 
+		local friendsInGame = 0 
+
+		for i,v in pairs(playersFriends) do
+			friendsInTotal  = friendsInTotal + 1
+
+			if v.IsOnline then
+				onlineFriends = onlineFriends + 1
+			end
+
+			if players:FindFirstChild(v.Username) then
+				friendsInGame = friendsInGame + 1
+			end
+		end
+
+		if not checkSirius() then return end
+
+		homeContainer.Interactions.Friends.All.Value.Text = tostring(friendsInTotal).." friends"
+		homeContainer.Interactions.Friends.Offline.Value.Text = tostring(friendsInTotal - onlineFriends).." friends"
+		homeContainer.Interactions.Friends.Online.Value.Text = tostring(onlineFriends).." friends"
+		homeContainer.Interactions.Friends.InGame.Value.Text = tostring(friendsInGame).." friends"
+
+	else
+		friendsCooldown -= 1
+	end
+end
+
+function promptModerator(player, role)
+	local serversAvailable = false
+	local promptClosed = false
+
+	if moderatorDetectionPrompt.Visible then return end
+
+	moderatorDetectionPrompt.Size = UDim2.new(0, 283, 0, 175)
+	moderatorDetectionPrompt.UIGradient.Offset = Vector2.new(0, 1)
+	wipeTransparency(moderatorDetectionPrompt, 1, true)
+
+	moderatorDetectionPrompt.DisplayName.Text = player.DisplayName
+	moderatorDetectionPrompt.Rank.Text = role
+	moderatorDetectionPrompt.Avatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId="..player.UserId.."&width=420&height=420&format=png"
+
+	moderatorDetectionPrompt.Visible = true
+
+	for _, v in ipairs(game:GetService("HttpService"):JSONDecode(game:HttpGetAsync("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")).data) do
+		if type(v) == "table" and v.maxPlayers > v.playing and v.id ~= game.JobId then
+			serversAvailable = true
+		end
+	end
+
+	if not serversAvailable then
+		moderatorDetectionPrompt.Serverhop.Visible = false
+	else
+		moderatorDetectionPrompt.ServersAvailableFade.Visible = true
+	end
+
+	tweenService:Create(moderatorDetectionPrompt, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 0}):Play()
+	tweenService:Create(moderatorDetectionPrompt, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 300, 0, 186)}):Play()
+	tweenService:Create(moderatorDetectionPrompt.UIGradient, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {Offset = Vector2.new(0, 0.65)}):Play()
+	tweenService:Create(moderatorDetectionPrompt.Title, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+	tweenService:Create(moderatorDetectionPrompt.Subtitle, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+	tweenService:Create(moderatorDetectionPrompt.Avatar, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.7}):Play()
+	tweenService:Create(moderatorDetectionPrompt.Avatar, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {ImageTransparency = 0}):Play()
+	tweenService:Create(moderatorDetectionPrompt.DisplayName, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+	tweenService:Create(moderatorDetectionPrompt.Rank, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+	tweenService:Create(moderatorDetectionPrompt.Serverhop, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.7}):Play()
+	tweenService:Create(moderatorDetectionPrompt.Leave, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.7}):Play()
+	task.wait(0.2)
+	tweenService:Create(moderatorDetectionPrompt.Serverhop, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+	tweenService:Create(moderatorDetectionPrompt.Leave, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+	task.wait(0.3)
+	tweenService:Create(moderatorDetectionPrompt.Close, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {ImageTransparency = 0.6}):Play()
+
+	local function closeModPrompt()
+		tweenService:Create(moderatorDetectionPrompt, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+		tweenService:Create(moderatorDetectionPrompt, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 283, 0, 175)}):Play()
+		tweenService:Create(moderatorDetectionPrompt.UIGradient, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Offset = Vector2.new(0, 1)}):Play()
+		tweenService:Create(moderatorDetectionPrompt.Title, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+		tweenService:Create(moderatorDetectionPrompt.Subtitle, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+		tweenService:Create(moderatorDetectionPrompt.Avatar, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+		tweenService:Create(moderatorDetectionPrompt.Avatar, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+		tweenService:Create(moderatorDetectionPrompt.DisplayName, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+		tweenService:Create(moderatorDetectionPrompt.Rank, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+		tweenService:Create(moderatorDetectionPrompt.Serverhop, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+		tweenService:Create(moderatorDetectionPrompt.Leave, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+		tweenService:Create(moderatorDetectionPrompt.Serverhop, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+		tweenService:Create(moderatorDetectionPrompt.Leave, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+		tweenService:Create(moderatorDetectionPrompt.Close, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+		task.wait(0.5)
+		moderatorDetectionPrompt.Visible = false
+	end
+
+	moderatorDetectionPrompt.Leave.MouseButton1Click:Connect(function()
+		closeModPrompt()
+		game:Shutdown()
+	end)
+
+	moderatorDetectionPrompt.Serverhop.MouseEnter:Connect(function()
+		tweenService:Create(moderatorDetectionPrompt.ServersAvailableFade, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0.5}):Play()
+	end)
+
+	moderatorDetectionPrompt.Serverhop.MouseLeave:Connect(function()
+		tweenService:Create(moderatorDetectionPrompt.ServersAvailableFade, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+	end)
+
+	moderatorDetectionPrompt.Serverhop.MouseButton1Click:Connect(function()
+		if promptClosed then return end
+		serverhop()
+		closeModPrompt()
+	end)
+
+	moderatorDetectionPrompt.Close.MouseButton1Click:Connect(function()
+		closeModPrompt()
+		promptClosed = true
+	end)
+end
+
+local function UpdateHome()
+	if not checkSirius() then return end
+
+	local function format(Int)
+		return string.format("%02i", Int)
+	end
+
+	local function convertToHMS(Seconds)
+		local Minutes = (Seconds - Seconds%60)/60
+		Seconds = Seconds - Minutes*60
+		local Hours = (Minutes - Minutes%60)/60
+		Minutes = Minutes - Hours*60
+		return format(Hours)..":"..format(Minutes)..":"..format(Seconds)
+	end
+
+	-- Home Title
+	homeContainer.Title.Text = "Welcome home, "..localPlayer.DisplayName
+
+	-- Players
+	homeContainer.Interactions.Server.Players.Value.Text = #players:GetPlayers().." playing"
+	homeContainer.Interactions.Server.MaxPlayers.Value.Text = players.MaxPlayers.." players can join this server"
+
+	-- Ping
+	homeContainer.Interactions.Server.Latency.Value.Text = math.floor(getPing()).."ms"
+
+	-- Time
+	homeContainer.Interactions.Server.Time.Value.Text = convertToHMS(time())
+
+	-- Region
+	homeContainer.Interactions.Server.Region.Value.Text = "Unable to retrieve region"
+
+	-- Player Information
+	homeContainer.Interactions.User.Avatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId="..localPlayer.UserId.."&width=420&height=420&format=png"
+	homeContainer.Interactions.User.Title.Text = localPlayer.DisplayName
+	homeContainer.Interactions.User.Subtitle.Text = localPlayer.Name
+
+	-- Update Executor
+	homeContainer.Interactions.Client.Title.Text = identifyexecutor()
+	if not table.find(siriusValues.executors, string.lower(identifyexecutor())) then
+		homeContainer.Interactions.Client.Subtitle.Text = "This executor is not verified as supported - but may still work just fine."
+	end
+
+	-- Update Friends Statuses
+	checkFriends()
+end
+
+local function openHome()
+	if debounce then return end
+	debounce = true
+	homeContainer.Visible = true
+
+	local homeBlur = Instance.new("BlurEffect", lighting)
+	homeBlur.Size = 0
+	homeBlur.Name = "HomeBlur"
+
+	homeContainer.BackgroundTransparency = 1
+	homeContainer.Title.TextTransparency = 1
+	homeContainer.Subtitle.TextTransparency = 1
+
+	for _, homeItem in ipairs(homeContainer.Interactions:GetChildren()) do
+
+		wipeTransparency(homeItem, 1, true)
+
+		homeItem.Position = UDim2.new(0, homeItem.Position.X.Offset - 20, 0, homeItem.Position.Y.Offset - 20)
+		homeItem.Size = UDim2.new(0, homeItem.Size.X.Offset + 30, 0, homeItem.Size.Y.Offset + 20)
+
+		if homeItem.UIGradient.Offset.Y > 0 then
+			homeItem.UIGradient.Offset = Vector2.new(0, homeItem.UIGradient.Offset.Y + 3)
+			homeItem.UIStroke.UIGradient.Offset = Vector2.new(0, homeItem.UIStroke.UIGradient.Offset.Y + 3)
+		else
+			homeItem.UIGradient.Offset = Vector2.new(0, homeItem.UIGradient.Offset.Y - 3)
+			homeItem.UIStroke.UIGradient.Offset = Vector2.new(0, homeItem.UIStroke.UIGradient.Offset.Y - 3)
+		end
+	end
+
+	tweenService:Create(homeContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.9}):Play()
+	tweenService:Create(homeBlur, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {Size = 5}):Play()
+
+	tweenService:Create(camera, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {FieldOfView = camera.FieldOfView + 5}):Play()
+
+	task.wait(0.25)
+
+	for _, inGameUI in ipairs(localPlayer:FindFirstChildWhichIsA("PlayerGui"):GetChildren()) do
+		if inGameUI:IsA("ScreenGui") then
+			if inGameUI.Enabled then
+				if not table.find(getgenv().cachedInGameUI, inGameUI.Name) then
+					table.insert(getgenv().cachedInGameUI, #getgenv().cachedInGameUI+1, inGameUI.Name)
+				end
+
+				inGameUI.Enabled = false
+			end
+		end
+	end
+
+	table.clear(getgenv().cachedCoreUI)
+
+	for _, coreUI in pairs({"PlayerList", "Chat", "EmotesMenu", "Health", "Backpack"}) do
+		if game:GetService("StarterGui"):GetCoreGuiEnabled(coreUI) then
+			table.insert(getgenv().cachedCoreUI, #getgenv().cachedCoreUI+1, coreUI)
+		end
+	end
+
+	for _, coreUI in pairs(getgenv().cachedCoreUI) do
+		game:GetService("StarterGui"):SetCoreGuiEnabled(coreUI, false)
+	end
+
+	createReverb(0.8)
+
+	tweenService:Create(camera, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {FieldOfView = camera.FieldOfView - 40}):Play()
+
+	tweenService:Create(homeContainer, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.7}):Play()
+	tweenService:Create(homeContainer.Title, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+	tweenService:Create(homeContainer.Subtitle, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {TextTransparency = 0.4}):Play()
+	tweenService:Create(homeBlur, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {Size = 20}):Play()
+
+	for _, homeItem in ipairs(homeContainer.Interactions:GetChildren()) do
+		for _, otherHomeItem in ipairs(homeItem:GetDescendants()) do
+			if otherHomeItem.ClassName == "Frame" then
+				tweenService:Create(otherHomeItem, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.7}):Play()
+			elseif otherHomeItem.ClassName == "TextLabel" then
+				if otherHomeItem.Name == "Title" then
+					tweenService:Create(otherHomeItem, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+				else
+					tweenService:Create(otherHomeItem, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0.3}):Play()
+				end
+			elseif otherHomeItem.ClassName == "ImageLabel" then
+				tweenService:Create(otherHomeItem, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.8}):Play()
+				tweenService:Create(otherHomeItem, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {ImageTransparency = 0}):Play()
+			end
+		end
+
+		tweenService:Create(homeItem, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 0}):Play()
+		tweenService:Create(homeItem.UIStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Transparency = 0}):Play()
+		tweenService:Create(homeItem, TweenInfo.new(0.5, Enum.EasingStyle.Back), {Position = UDim2.new(0, homeItem.Position.X.Offset + 20, 0, homeItem.Position.Y.Offset + 20)}):Play()
+		tweenService:Create(homeItem, TweenInfo.new(0.5, Enum.EasingStyle.Back), {Size = UDim2.new(0, homeItem.Size.X.Offset - 30, 0, homeItem.Size.Y.Offset - 20)}):Play()
+
+		task.delay(0.03, function()
+			if homeItem.UIGradient.Offset.Y > 0 then
+				tweenService:Create(homeItem.UIGradient, TweenInfo.new(1, Enum.EasingStyle.Exponential), {Offset = Vector2.new(0, homeItem.UIGradient.Offset.Y - 3)}):Play()
+				tweenService:Create(homeItem.UIStroke.UIGradient, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Offset = Vector2.new(0, homeItem.UIStroke.UIGradient.Offset.Y - 3)}):Play()
+			else
+				tweenService:Create(homeItem.UIGradient, TweenInfo.new(1, Enum.EasingStyle.Exponential), {Offset = Vector2.new(0, homeItem.UIGradient.Offset.Y + 3)}):Play()
+				tweenService:Create(homeItem.UIStroke.UIGradient, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Offset = Vector2.new(0, homeItem.UIStroke.UIGradient.Offset.Y + 3)}):Play()
+			end
+		end)
+
+		task.wait(0.02)
+	end
+
+	task.wait(0.85)
+
+	debounce = false
+end
+
+local function closeHome()
+	if debounce then return end
+	debounce = true
+
+	tweenService:Create(camera, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {FieldOfView = camera.FieldOfView + 35}):Play()
+
+	for _, obj in ipairs(lighting:GetChildren()) do
+		if obj.Name == "HomeBlur" then
+			tweenService:Create(obj, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {Size = 0}):Play()
+			task.delay(0.6, obj.Destroy, obj)
+		end
+	end
+
+	tweenService:Create(homeContainer, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+	tweenService:Create(homeContainer.Title, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+	tweenService:Create(homeContainer.Subtitle, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+
+	for _, homeItem in ipairs(homeContainer.Interactions:GetChildren()) do
+		for _, otherHomeItem in ipairs(homeItem:GetDescendants()) do
+			if otherHomeItem.ClassName == "Frame" then
+				tweenService:Create(otherHomeItem, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+			elseif otherHomeItem.ClassName == "TextLabel" then
+				if otherHomeItem.Name == "Title" then
+					tweenService:Create(otherHomeItem, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+				else
+					tweenService:Create(otherHomeItem, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+				end
+			elseif otherHomeItem.ClassName == "ImageLabel" then
+				tweenService:Create(otherHomeItem, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+				tweenService:Create(otherHomeItem, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+			end
+		end
+		tweenService:Create(homeItem, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+		tweenService:Create(homeItem.UIStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+	end
+
+	task.wait(0.2)
+
+	for _, cachedInGameUIObject in pairs(getgenv().cachedInGameUI) do
+		for _, currentPlayerUI in ipairs(localPlayer:FindFirstChildWhichIsA("PlayerGui"):GetChildren()) do
+			if table.find(getgenv().cachedInGameUI, currentPlayerUI.Name) then
+				currentPlayerUI.Enabled = true
+			end 
+		end
+	end
+
+	for _, coreUI in pairs(getgenv().cachedCoreUI) do
+		game:GetService("StarterGui"):SetCoreGuiEnabled(coreUI, true)
+	end
+
+	removeReverbs(0.5)
+
+	task.wait(0.52)
+
+	homeContainer.Visible = false
+	debounce = false
+end
+
+
+local function openScriptSearch()
+	debounce = true
+
+	scriptSearch.Size = UDim2.new(0, 480, 0, 23)
+	scriptSearch.Position = UDim2.new(0.5, 0, 0.5, 0)
+	scriptSearch.SearchBox.Position = UDim2.new(0.509, 0, 0.5, 0)
+	scriptSearch.Icon.Position = UDim2.new(0.04, 0, 0.5, 0)
+	scriptSearch.SearchBox.Text = ""
+	scriptSearch.UIGradient.Offset = Vector2.new(0, 2)
+	scriptSearch.SearchBox.PlaceholderText = "Search ScriptBlox.com"
+	scriptSearch.List.Template.Visible = false
+	scriptSearch.List.Visible = false
+	scriptSearch.Visible = true
+
+	wipeTransparency(scriptSearch, 1, true)
+
+	tweenService:Create(scriptSearch, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {BackgroundTransparency = 0}):Play()
+	tweenService:Create(scriptSearch, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {Size = UDim2.new(0, 580, 0, 43)}):Play()
+	tweenService:Create(scriptSearch.Shadow, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {ImageTransparency = 0.85}):Play()
+	task.wait(0.03)
+	tweenService:Create(scriptSearch.Icon, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {ImageTransparency = 0}):Play()
+	task.wait(0.02)
+	tweenService:Create(scriptSearch.SearchBox, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 0}):Play()
+
+
+	task.wait(0.3)
+	scriptSearch.SearchBox:CaptureFocus()
+	task.wait(0.2)
+	debounce = false
+end
+
+local function closeScriptSearch()
+	debounce = true
+
+	wipeTransparency(scriptSearch, 1, false)
+
+	task.wait(0.1)
+
+	scriptSearch.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	scriptSearch.UIGradient.Enabled = false
+	tweenService:Create(scriptSearch, TweenInfo.new(0.4, Enum.EasingStyle.Quint),  {Size = UDim2.new(0, 520, 0, 0)}):Play()
+	scriptSearch.SearchBox:ReleaseFocus()
+
+	task.wait(0.5)
+
+	for _, createdScript in ipairs(scriptSearch.List:GetChildren()) do
+		if createdScript.Name ~= "Placeholder" and createdScript.Name ~= "Template" and createdScript.ClassName == "Frame" then
+			createdScript:Destroy()
+		end
+	end
+
+	task.wait(0.1)
+	scriptSearch.BackgroundColor3 = Color3.fromRGB(255 ,255, 255)
+	scriptSearch.Visible = false
+	scriptSearch.UIGradient.Enabled = true
+	debounce = false
+end
+
+local function createScript(result)
+	local newScript = UI.ScriptSearch.List.Template:Clone()
+	newScript.Name = result.title
+	newScript.Parent = UI.ScriptSearch.List
+	newScript.Visible = true
+
+	for _, tag in ipairs(newScript.Tags:GetChildren()) do
+		if tag.ClassName == "Frame" then
+			tag.Shadow.ImageTransparency = 1
+			tag.BackgroundTransparency = 1
+			tag.Title.TextTransparency = 1
+		end
+	end
+
+	task.spawn(function()
+		local response
+
+		local success, ErrorStatement = pcall(function()
+			local responseRequest = httpRequest({
+				Url = "https://www.scriptblox.com/api/script/"..result['slug'],
+				Method = "GET"
+			})
+
+			response = httpService:JSONDecode(responseRequest.Body)
+		end)
+
+		newScript.ScriptDescription.Text = response.script.features
+
+		local likes = response.script.likeCount
+		local dislikes = response.script.dislikeCount
+
+		if likes ~= dislikes then
+			newScript.Tags.Review.Title.Text = (likes > dislikes) and "Positive Reviews" or "Negative Reviews"
+			newScript.Tags.Review.BackgroundColor3 = (likes > dislikes) and Color3.fromRGB(0, 139, 102) or Color3.fromRGB(180, 0, 0)
+			newScript.Tags.Review.Size = (likes > dislikes) and UDim2.new(0, 145, 1, 0) or UDim2.new(0, 150, 1, 0)
+		elseif likes > 0 then
+			newScript.Tags.Review.Title.Text = "Mixed Reviews"
+			newScript.Tags.Review.BackgroundColor3 = Color3.fromRGB(198, 132, 0)
+			newScript.Tags.Review.Size = UDim2.new(0, 130, 1, 0)
+		else
+			newScript.Tags.Review.Visible = false
+		end
+
+		newScript.ScriptAuthor.Text = "uploaded by "..response.script.owner.username
+		newScript.Tags.Verified.Visible = response.script.owner.verified or false
+
+		tweenService:Create(newScript, TweenInfo.new(.5, Enum.EasingStyle.Quint),  {BackgroundTransparency = 0.8}):Play()
+		tweenService:Create(newScript.ScriptName, TweenInfo.new(.5, Enum.EasingStyle.Quint),  {TextTransparency = 0}):Play()
+		tweenService:Create(newScript.Execute, TweenInfo.new(.5, Enum.EasingStyle.Quint),  {BackgroundTransparency = 0.8}):Play()
+		tweenService:Create(newScript.Execute, TweenInfo.new(.5, Enum.EasingStyle.Quint),  {TextTransparency = 0}):Play()
+
+		newScript.Tags.Visible = true
+
+		tweenService:Create(newScript.ScriptDescription, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 0.3}):Play()
+		tweenService:Create(newScript.ScriptAuthor, TweenInfo.new(.5, Enum.EasingStyle.Quint),  {TextTransparency = 0.7}):Play()
+
+		for _, tag in ipairs(newScript.Tags:GetChildren()) do
+			if tag.ClassName == "Frame" then
+				tweenService:Create(tag.Shadow, TweenInfo.new(.5, Enum.EasingStyle.Quint),  {ImageTransparency = 0.7}):Play()
+				tweenService:Create(tag, TweenInfo.new(.5, Enum.EasingStyle.Quint),  {BackgroundTransparency = 0}):Play()
+				tweenService:Create(tag.Title, TweenInfo.new(.5, Enum.EasingStyle.Quint),  {TextTransparency = 0}):Play()
+			end
+		end
+	end)
+
+	wipeTransparency(newScript, 1, true)
+
+	newScript.ScriptName.Text = result.title
+
+
+	newScript.Tags.Visible = false
+	newScript.Tags.Patched.Visible = result.isPatched or false
+
+	newScript.Execute.MouseButton1Click:Connect(function()
+		queueNotification("ScriptSearch", "Running "..result.title.. " via ScriptSearch" , 4384403532)
+		closeScriptSearch()
+		loadstring(result.script)()
+	end)
+end
+
+local function extractDomain(link)
+	local domainToReturn = link:match("([%w-_]+%.[%w-_%.]+)")
+	return domainToReturn
+end
+
+local function securityDetection(title, content, link, gradient, actions)
+	if not checkSirius() then return end
+
+	local domain = extractDomain(link) or link
+	checkFolder()
+	local currentAllowlist = isfile and isfile(siriusValues.siriusFolder.."/".."allowedLinks.srs") and readfile(siriusValues.siriusFolder.."/".."allowedLinks.srs") or nil
+	if currentAllowlist then currentAllowlist = httpService:JSONDecode(currentAllowlist) if table.find(currentAllowlist, domain) then return true end end
+
+	local newSecurityPrompt = securityPrompt:Clone()
+
+	newSecurityPrompt.Parent = UI
+	newSecurityPrompt.Name = link
+
+	wipeTransparency(newSecurityPrompt, 1, true)
+	newSecurityPrompt.Size = UDim2.new(0, 478, 0, 150)
+
+	newSecurityPrompt.Title.Text = title
+	newSecurityPrompt.Subtitle.Text = content
+	newSecurityPrompt.FoundLink.Text = domain
+
+	newSecurityPrompt.Visible = true
+	newSecurityPrompt.UIGradient.Color = gradient
+
+	newSecurityPrompt.Buttons.Template.Visible = false
+
+	local function closeSecurityPrompt()
+		tweenService:Create(newSecurityPrompt, TweenInfo.new(0.52, Enum.EasingStyle.Quint),  {Size = UDim2.new(0, 500, 0, 165)}):Play()
+		tweenService:Create(newSecurityPrompt, TweenInfo.new(0.5, Enum.EasingStyle.Quint),  {BackgroundTransparency = 1}):Play()
+		tweenService:Create(newSecurityPrompt.Title, TweenInfo.new(0.5, Enum.EasingStyle.Quint),  {TextTransparency = 1}):Play()
+		tweenService:Create(newSecurityPrompt.Subtitle, TweenInfo.new(0.5, Enum.EasingStyle.Quint),  {TextTransparency = 1}):Play()
+		tweenService:Create(newSecurityPrompt.FoundLink, TweenInfo.new(0.5, Enum.EasingStyle.Quint),  {TextTransparency = 1}):Play()
+
+
+		for _, button in ipairs(newSecurityPrompt.Buttons:GetChildren()) do
+			if button.Name ~= "Template" and button.ClassName == "TextButton" then
+				tweenService:Create(button, TweenInfo.new(0.3, Enum.EasingStyle.Quint),  {BackgroundTransparency = 1}):Play()
+				tweenService:Create(button, TweenInfo.new(0.3, Enum.EasingStyle.Quint),  {TextTransparency = 1}):Play()
+			end
+		end
+		task.wait(0.55)
+		newSecurityPrompt:Destroy()
+	end
+
+	local decision
+
+	for _, action in ipairs(actions) do
+		local newAction = newSecurityPrompt.Buttons.Template:Clone()
+		newAction.Name = action[1]
+		newAction.Text = action[1]
+		newAction.Parent = newSecurityPrompt.Buttons
+		newAction.Visible = true
+		newAction.Size = UDim2.new(0, newAction.TextBounds.X + 50, 0, 36) -- textbounds
+
+		newAction.MouseButton1Click:Connect(function()
+			if action[2] then
+				if action[3] then
+					checkFolder()
+					if currentAllowlist then
+						table.insert(currentAllowlist, domain)
+						writefile(siriusValues.siriusFolder.."/".."allowedLinks.srs", httpService:JSONEncode(currentAllowlist))
+					else
+						writefile(siriusValues.siriusFolder.."/".."allowedLinks.srs", httpService:JSONEncode({domain}))
+					end
+				end
+				decision = true
+			else
+				decision = false
+			end
+
+			closeSecurityPrompt()
+		end)
+	end
+
+	tweenService:Create(newSecurityPrompt, TweenInfo.new(0.4, Enum.EasingStyle.Quint),  {Size = UDim2.new(0, 576, 0, 181)}):Play()
+	tweenService:Create(newSecurityPrompt, TweenInfo.new(0.5, Enum.EasingStyle.Quint),  {BackgroundTransparency = 0}):Play()
+	tweenService:Create(newSecurityPrompt.Title, TweenInfo.new(0.5, Enum.EasingStyle.Quint),  {TextTransparency = 0}):Play()
+	tweenService:Create(newSecurityPrompt.Subtitle, TweenInfo.new(0.5, Enum.EasingStyle.Quint),  {TextTransparency = 0.3}):Play()
+	task.wait(0.03)
+	tweenService:Create(newSecurityPrompt.FoundLink, TweenInfo.new(0.5, Enum.EasingStyle.Quint),  {TextTransparency = 0.2}):Play()
+
+	task.wait(0.1)
+
+	for _, button in ipairs(newSecurityPrompt.Buttons:GetChildren()) do
+		if button.Name ~= "Template" and button.ClassName == "TextButton" then
+			tweenService:Create(button, TweenInfo.new(0.5, Enum.EasingStyle.Quint),  {BackgroundTransparency = 0.7}):Play()
+			tweenService:Create(button, TweenInfo.new(0.5, Enum.EasingStyle.Quint),  {TextTransparency = 0.05}):Play()
+			task.wait(0.1)
+		end
+	end
+
+	newSecurityPrompt.FoundLink.MouseEnter:Connect(function()
+		newSecurityPrompt.FoundLink.Text = link
+		tweenService:Create(newSecurityPrompt.FoundLink, TweenInfo.new(0.5, Enum.EasingStyle.Quint),  {TextTransparency = 0.4}):Play()
+	end)
+
+	newSecurityPrompt.FoundLink.MouseLeave:Connect(function()
+		newSecurityPrompt.FoundLink.Text = domain
+		tweenService:Create(newSecurityPrompt.FoundLink, TweenInfo.new(0.5, Enum.EasingStyle.Quint),  {TextTransparency = 0.2}):Play()
+	end)
+
+	repeat task.wait() until decision
+	return decision
+end
+
+if Essential or Pro then
+	getgenv()[index] = function(data)
+		if checkSirius() and checkSetting("Intelligent HTTP Interception").current then
+			local title = "Do you trust this source?"
+			local content = "Sirius has prevented data from being sent off-client, would you like to allow data to be sent or retrieved from this source?"
+			local url = data.Url or "Unknown Link"
+			local gradient = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.new(0, 0, 0)),ColorSequenceKeypoint.new(1, Color3.new(0.764706, 0.305882, 0.0941176))})
+			local actions = {{"Always Allow", true, true}, {"Allow just this once", true}, {"Don't Allow", false}}
+
+			if url == "http://127.0.0.1:6463/rpc?v=1" then
+				local bodyDecoded = httpService:JSONDecode(data.Body)
+
+				if bodyDecoded.cmd == "INVITE_BROWSER" then
+					title = "Would you like to join this Discord server?"
+					content = "Sirius has prevented your Discord client from automatically joining this Discord server, would you like to continue and join, or block it?"
+					url = bodyDecoded.args and "discord.gg/"..bodyDecoded.args.code or "Unknown Invite"
+					gradient = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.new(0, 0, 0)),ColorSequenceKeypoint.new(1, Color3.new(0.345098, 0.396078, 0.94902))})
+					actions = {{"Allow", true}, {"Don't Allow", false}}
+				end
+			end
+
+			local answer = securityDetection(title, content, url, gradient, actions)
+
+
+			if answer then 
+				return originalRequest(data)
+			else
+				return
+			end
+		else
+			return originalRequest(data)
+		end
+	end
+
+	getgenv()[indexSetClipboard] = function(data)
+		if checkSirius() and checkSetting("Intelligent Clipboard Interception").current then
+			local title = "Would you like to copy this to your clipboard?"
+			local content = "Sirius has prevented a script from setting the below text to your clipboard, would you like to allow this, or prevent it from copying?"
+			local url = data or "Unknown Clipboard"
+			local gradient = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.new(0, 0, 0)),ColorSequenceKeypoint.new(1, Color3.new(0.776471, 0.611765, 0.529412))})
+			local actions = {{"Allow", true}, {"Don't Allow", false}}
+
+			local answer = securityDetection(title, content, url, gradient, actions)
+
+			if answer then 
+				return originalSetClipboard(data)
+			else
+				return
+			end
+		else
+			return originalSetClipboard(data)
+		end
+	end
+end
+
+
+local function searchScriptBlox(query)
+	local response
+
+	local success, ErrorStatement = pcall(function()
+		local responseRequest = httpRequest({
+			Url = "https://scriptblox.com/api/script/search?q="..httpService:UrlEncode(query).."&mode=free&max=20&page=1",
+			Method = "GET"
+		})
+
+		response = httpService:JSONDecode(responseRequest.Body)
+	end)
+
+	if not success then
+		queueNotification("ScriptSearch", "ScriptSearch backend encountered an error, try again later", 4384402990)
+		closeScriptSearch()
+		return
+	end
+
+	tweenService:Create(scriptSearch.NoScriptsTitle, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 1}):Play()
+	tweenService:Create(scriptSearch.NoScriptsDesc, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 1}):Play()
+
+	for _, createdScript in ipairs(scriptSearch.List:GetChildren()) do
+		if createdScript.Name ~= "Placeholder" and createdScript.Name ~= "Template" and createdScript.ClassName == "Frame" then
+			wipeTransparency(createdScript, 1, true)
+		end
+	end
+
+	scriptSearch.List.Visible = true
+	task.wait(0.5)
+
+	scriptSearch.List.CanvasPosition = Vector2.new(0,0)
+
+	for _, createdScript in ipairs(scriptSearch.List:GetChildren()) do
+		if createdScript.Name ~= "Placeholder" and createdScript.Name ~= "Template" and createdScript.ClassName == "Frame" then
+			createdScript:Destroy()
+		end
+	end
+
+	tweenService:Create(scriptSearch, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {Size = UDim2.new(0, 580, 0, 529)}):Play()
+	tweenService:Create(scriptSearch.Icon, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {Position = UDim2.new(0.054, 0, 0.056, 0)}):Play()
+	tweenService:Create(scriptSearch.SearchBox, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {Position = UDim2.new(0.523, 0, 0.056, 0)}):Play()
+	tweenService:Create(scriptSearch.UIGradient, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {Offset = Vector2.new(0, 0.6)}):Play()
+
+	if response then
+		local scriptCreated = false
+		for _, scriptResult in pairs(response.result.scripts) do
+			local success, response = pcall(function()
+				createScript(scriptResult)
+			end)
+
+			scriptCreated = true
+		end
+
+		if not scriptCreated then
+			task.wait(0.2)
+			tweenService:Create(scriptSearch.NoScriptsTitle, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 0}):Play()
+			task.wait(0.1)
+			tweenService:Create(scriptSearch.NoScriptsDesc, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 0}):Play()
+		else
+			tweenService:Create(scriptSearch.List, TweenInfo.new(.3,Enum.EasingStyle.Quint),  {ScrollBarImageTransparency = 0}):Play()
+		end
+	else
+		queueNotification("ScriptSearch", "ScriptSearch backend encountered an error, try again later", 4384402990)
+		closeScriptSearch()
+		return
+	end
+end
+
+local function openSmartBar()
+	smartBarOpen = true
+
+	coreGui.RobloxGui.Backpack.Position = UDim2.new(0,0,0,0)
+
+	-- Set Values for frame properties
+	smartBar.BackgroundTransparency = 1
+	smartBar.Time.TextTransparency = 1
+	smartBar.UIStroke.Transparency = 1
+	smartBar.Shadow.ImageTransparency = 1
+	smartBar.Visible = true
+	smartBar.Position = UDim2.new(0.5, 0, 1.05, 0)
+	smartBar.Size = UDim2.new(0, 531, 0, 64)
+	toggle.Rotation = 180
+	toggle.Visible = not checkSetting("Hide Toggle Button").current
+
+	if checkTools() then
+		toggle.Position = UDim2.new(0.5,0,1,-68)
+	else
+		toggle.Position = UDim2.new(0.5, 0, 1, -5)
+	end
+
+	for _, button in ipairs(smartBar.Buttons:GetChildren()) do
+		button.UIGradient.Rotation = -120
+		button.UIStroke.UIGradient.Rotation = -120
+		button.Size = UDim2.new(0,30,0,30)
+		button.Position = UDim2.new(button.Position.X.Scale, 0, 1.3, 0)
+		button.BackgroundTransparency = 1
+		button.UIStroke.Transparency = 1
+		button.Icon.ImageTransparency = 1
+	end
+
+	tweenService:Create(coreGui.RobloxGui.Backpack, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {Position = UDim2.new(-0.325,0,0,0)}):Play()
+
+	tweenService:Create(toggle, TweenInfo.new(0.82, Enum.EasingStyle.Quint), {Rotation = 0}):Play()
+	tweenService:Create(smartBar, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {Position = UDim2.new(0.5, 0, 1, -12)}):Play()
+	tweenService:Create(toastsContainer, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0.5, 0, 1, -110)}):Play()
+	tweenService:Create(toggle, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {Position = UDim2.new(0.5, 0, 1, -85)}):Play()
+	tweenService:Create(smartBar, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {Size = UDim2.new(0,581,0,70)}):Play()
+	tweenService:Create(smartBar, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {BackgroundTransparency = 0}):Play()
+	tweenService:Create(smartBar.Shadow, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {ImageTransparency = 0.7}):Play()
+	tweenService:Create(smartBar.Time, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+	tweenService:Create(smartBar.UIStroke, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {Transparency = 0.95}):Play()
+	tweenService:Create(toggle, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {ImageTransparency = 0}):Play()
+
+	for _, button in ipairs(smartBar.Buttons:GetChildren()) do
+		tweenService:Create(button.UIStroke, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {Transparency = 0}):Play()
+		tweenService:Create(button, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 36, 0, 36)}):Play()
+		tweenService:Create(button.UIGradient, TweenInfo.new(1, Enum.EasingStyle.Quint), {Rotation = 50}):Play()
+		tweenService:Create(button.UIStroke.UIGradient, TweenInfo.new(1, Enum.EasingStyle.Quint), {Rotation = 50}):Play()
+		tweenService:Create(button, TweenInfo.new(0.8, Enum.EasingStyle.Exponential), {Position = UDim2.new(button.Position.X.Scale, 0, 0.5, 0)}):Play()
+		tweenService:Create(button, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {BackgroundTransparency = 0}):Play()
+		tweenService:Create(button.Icon, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {ImageTransparency = 0}):Play()
+		task.wait(0.03)
+	end
+end
+
+local function closeSmartBar()
+	smartBarOpen = false
+
+	for _, otherPanel in ipairs(UI:GetChildren()) do
+		if smartBar.Buttons:FindFirstChild(otherPanel.Name) then
+			if isPanel(otherPanel.Name) and otherPanel.Visible then
+				task.spawn(closePanel, otherPanel.Name, true)
+				task.wait()
+			end
+		end
+	end
+
+	tweenService:Create(smartBar.Time, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+	for _, Button in ipairs(smartBar.Buttons:GetChildren()) do
+		tweenService:Create(Button.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+		tweenService:Create(Button, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 30, 0, 30)}):Play()
+		tweenService:Create(Button, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+		tweenService:Create(Button.Icon, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+	end
+
+	tweenService:Create(coreGui.RobloxGui.Backpack, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+
+	tweenService:Create(smartBar, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {BackgroundTransparency = 1}):Play()
+	tweenService:Create(smartBar.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+	tweenService:Create(smartBar.Shadow, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+	tweenService:Create(smartBar, TweenInfo.new(0.5, Enum.EasingStyle.Back), {Size = UDim2.new(0,531,0,64)}):Play()
+	tweenService:Create(smartBar, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {Position = UDim2.new(0.5, 0,1, 73)}):Play()
+
+	-- If tools, move the toggle
+	if checkTools() then
+		tweenService:Create(toggle, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {Position = UDim2.new(0.5,0,1,-68)}):Play()
+		tweenService:Create(toastsContainer, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {Position = UDim2.new(0.5, 0, 1, -90)}):Play()
+		tweenService:Create(toggle, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Rotation = 180}):Play()
+	else
+		tweenService:Create(toastsContainer, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {Position = UDim2.new(0.5, 0, 1, -28)}):Play()
+		tweenService:Create(toggle, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), {Position = UDim2.new(0.5, 0, 1, -5)}):Play()
+		tweenService:Create(toggle, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {Rotation = 180}):Play()
+	end
+end
+
+local function windowFocusChanged(value)
+	if checkSirius() then
+		if value then -- Window Focused
+			setfpscap(tonumber(checkSetting("Artificial FPS Limit").current))
+			removeReverbs(0.5)
+		else          -- Window unfocused
+			if checkSetting("Muffle audio while unfocused").current then createReverb(0.7) end
+			if checkSetting("Limit FPS while unfocused").current then setfpscap(60) end
+		end
+	end
+end
+
+local function onChatted(player, message)
+	local enabled = checkSetting("Chat Spy").current and siriusValues.chatSpy.enabled
+	local chatSpyVisuals = siriusValues.chatSpy.visual
+
+	if not message or not checkSirius() then return end
+
+	if enabled and player ~= localPlayer then
+		local message2 = message:gsub("[\n\r]",''):gsub("\t",' '):gsub("[ ]+",' ')
+		local hidden = true
+
+		local get = getMessage.OnClientEvent:Connect(function(packet, channel)
+			if packet.SpeakerUserId == player.UserId and packet.Message == message2:sub(#message2-#packet.Message+1) and (channel=="All" or (channel=="Team" and players[packet.FromSpeaker].Team == localPlayer.Team)) then
+				hidden = false
+			end
+		end)
+
+		task.wait(1)
+
+		get:Disconnect()
+
+		if hidden and enabled then
+			chatSpyVisuals.Text = "Sirius Spy - [".. player.Name .."]: "..message2
+			starterGui:SetCore("ChatMakeSystemMessage", chatSpyVisuals)
+		end
+	end
+
+	if checkSetting("Log Messages").current then
+		local logData = {
+			["content"] = message,
+			["avatar_url"] = "https://www.roblox.com/headshot-thumbnail/image?userId="..player.UserId.."&width=420&height=420&format=png",
+			["username"] = player.DisplayName,
+			["allowed_mentions"] = {parse = {}}
+		}
+
+		logData = httpService:JSONEncode(logData)
+
+		pcall(function()
+			local req = originalRequest({
+				Url = checkSetting("Message Webhook URL").current,
+				Method = 'POST',
+				Headers = {
+					['Content-Type'] = 'application/json',
+				},
+				Body = logData
+			})
+		end)
+	end
+end
+
+local function sortPlayers()
+	local newTable = playerlistPanel.Interactions.List:GetChildren()
+
+	for index, player in ipairs(newTable) do
+		if player.ClassName ~= "Frame" or player.Name == "Placeholder" then
+			table.remove(newTable, index)
+		end
+	end
+
+	table.sort(newTable, function(playerA, playerB)
+		return playerA.Name < playerB.Name
+	end)
+
+	for index, frame in ipairs(newTable) do
+		if frame.ClassName == "Frame" then
+			if frame.Name ~= "Placeholder" then
+				frame.LayoutOrder = index 
+			end
+		end
+	end
+end
+
+local function kill(player)
+	-- kill
+end
+
+local function teleportTo(player)
+	if players:FindFirstChild(player.Name) then
+		queueNotification("Teleportation", "Teleporting to "..player.DisplayName..".")
+
+		local target = workspace:FindFirstChild(player.Name).HumanoidRootPart
+		localPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(target.Position.X, target.Position.Y, target.Position.Z)
+	else
+		queueNotification("Teleportation Error", player.DisplayName.." has left this server.")
+	end
+end
+
+local function createPlayer(player)
+	if not checkSirius() then return end
+
+	if playerlistPanel.Interactions.List:FindFirstChild(player.DisplayName) then return end
+
+	local newPlayer = playerlistPanel.Interactions.List.Template:Clone()
+	newPlayer.Name = player.DisplayName
+	newPlayer.Parent = playerlistPanel.Interactions.List
+	newPlayer.Visible = not searchingForPlayer
+
+	newPlayer.NoActions.Visible = false
+	newPlayer.PlayerInteractions.Visible = false
+	newPlayer.Role.Visible = false
+
+	newPlayer.Size = UDim2.new(0, 539, 0, 45)
+	newPlayer.DisplayName.Position = UDim2.new(0, 53, 0.5, 0)
+	newPlayer.DisplayName.Size = UDim2.new(0, 224, 0, 16)
+	newPlayer.Avatar.Size = UDim2.new(0, 30, 0, 30)
+
+	sortPlayers()
+
+	newPlayer.DisplayName.TextTransparency = 0
+	newPlayer.DisplayName.TextScaled = true
+	newPlayer.DisplayName.FontFace.Weight = Enum.FontWeight.Medium
+	newPlayer.DisplayName.Text = player.DisplayName
+	newPlayer.Avatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId="..player.UserId.."&width=420&height=420&format=png"
+
+	if creatorType == Enum.CreatorType.Group then
+		task.spawn(function()
+			local role = player:GetRoleInGroup(creatorId)
+			if role == "Guest" then
+				newPlayer.Role.Text = "Group Rank: None"
+			else
+				newPlayer.Role.Text = "Group Rank: "..role
+			end
+
+			newPlayer.Role.Visible = true
+			newPlayer.Role.TextTransparency = 1
+		end)
+	end
+
+	local function openInteractions()
+		if newPlayer.PlayerInteractions.Visible then return end
+
+		newPlayer.PlayerInteractions.BackgroundTransparency = 1
+		for _, interaction in ipairs(newPlayer.PlayerInteractions:GetChildren()) do
+			if interaction.ClassName == "Frame" and interaction.Name ~= "Placeholder" then
+				interaction.BackgroundTransparency = 1
+				interaction.Shadow.ImageTransparency = 1
+				interaction.Icon.ImageTransparency = 1
+				interaction.UIStroke.Transparency = 1
+			end
+		end
+
+		newPlayer.PlayerInteractions.Visible = true
+
+		for _, interaction in ipairs(newPlayer.PlayerInteractions:GetChildren()) do
+			if interaction.ClassName == "Frame" and interaction.Name ~= "Placeholder" then
+				tweenService:Create(interaction.UIStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Transparency = 0}):Play()
+				tweenService:Create(interaction.Icon, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {ImageTransparency = 0}):Play()
+				tweenService:Create(interaction.Shadow, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {ImageTransparency = 0.7}):Play()
+				tweenService:Create(interaction, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 0}):Play()
+			end
+		end
+	end
+
+	local function closeInteractions()
+		if not newPlayer.PlayerInteractions.Visible then return end
+		for _, interaction in ipairs(newPlayer.PlayerInteractions:GetChildren()) do
+			if interaction.ClassName == "Frame" and interaction.Name ~= "Placeholder" then
+				tweenService:Create(interaction.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+				tweenService:Create(interaction.Icon, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+				tweenService:Create(interaction.Shadow, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+				tweenService:Create(interaction, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+			end
+		end
+		task.wait(0.35)
+		newPlayer.PlayerInteractions.Visible = false
+	end
+
+	newPlayer.MouseEnter:Connect(function()
+		if debounce or not playerlistPanel.Visible then return end
+		tweenService:Create(newPlayer.UIStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+		tweenService:Create(newPlayer.DisplayName, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0.3}):Play()
+	end)
+
+	newPlayer.MouseLeave:Connect(function()
+		if debounce or not playerlistPanel.Visible then return end
+		task.spawn(closeInteractions)
+		tweenService:Create(newPlayer.DisplayName, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 53, 0.5, 0)}):Play()
+		tweenService:Create(newPlayer, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 539, 0, 45)}):Play()
+		tweenService:Create(newPlayer.Avatar, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 30, 0, 30)}):Play()
+		tweenService:Create(newPlayer.UIStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Transparency = 0}):Play()
+		tweenService:Create(newPlayer.DisplayName, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+		tweenService:Create(newPlayer.Role, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+	end)
+
+	newPlayer.Interact.MouseButton1Click:Connect(function()
+		if debounce or not playerlistPanel.Visible then return end
+		if creatorType == Enum.CreatorType.Group then
+			tweenService:Create(newPlayer.DisplayName, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 73, 0.39, 0)}):Play()
+			tweenService:Create(newPlayer.Role, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0.3}):Play()
+		else
+			tweenService:Create(newPlayer.DisplayName, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0, 73, 0.5, 0)}):Play()
+		end
+
+		if player ~= localPlayer then openInteractions() end
+
+		tweenService:Create(newPlayer, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 539, 0, 75)}):Play()
+
+		tweenService:Create(newPlayer.DisplayName, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+		tweenService:Create(newPlayer.Avatar, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 50, 0, 50)}):Play()
+		tweenService:Create(newPlayer.UIStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Transparency = 0}):Play()
+	end)
+
+	newPlayer.PlayerInteractions.Kill.Interact.MouseButton1Click:Connect(function()
+		queueNotification("Simulation Notification","Simulating Kill Notification for "..player.DisplayName..".")
+		tweenService:Create(newPlayer.PlayerInteractions.Kill, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {BackgroundColor3 = Color3.fromRGB(0, 124, 89)}):Play()
+		tweenService:Create(newPlayer.PlayerInteractions.Kill.Icon, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {ImageColor3 = Color3.fromRGB(220, 220, 220)}):Play()
+		tweenService:Create(newPlayer.PlayerInteractions.Kill.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {Color = Color3.fromRGB(0, 134, 96)}):Play()
+		kill(player)
+		task.wait(1)
+		tweenService:Create(newPlayer.PlayerInteractions.Kill, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
+		tweenService:Create(newPlayer.PlayerInteractions.Kill.Icon, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {ImageColor3 = Color3.fromRGB(100, 100, 100)}):Play()
+		tweenService:Create(newPlayer.PlayerInteractions.Kill.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {Color = Color3.fromRGB(60, 60, 60)}):Play()
+	end)
+
+	newPlayer.PlayerInteractions.Teleport.Interact.MouseButton1Click:Connect(function()
+		tweenService:Create(newPlayer.PlayerInteractions.Teleport, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {BackgroundColor3 = Color3.fromRGB(0, 152, 111)}):Play()
+		tweenService:Create(newPlayer.PlayerInteractions.Teleport.Icon, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {ImageColor3 = Color3.fromRGB(220, 220, 220)}):Play()
+		tweenService:Create(newPlayer.PlayerInteractions.Teleport.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {Color = Color3.fromRGB(0, 152, 111)}):Play()
+		teleportTo(player)
+		task.wait(0.5)
+		tweenService:Create(newPlayer.PlayerInteractions.Teleport, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
+		tweenService:Create(newPlayer.PlayerInteractions.Teleport.Icon, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {ImageColor3 = Color3.fromRGB(100, 100, 100)}):Play()
+		tweenService:Create(newPlayer.PlayerInteractions.Teleport.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {Color = Color3.fromRGB(60, 60, 60)}):Play()
+	end)
+
+	newPlayer.PlayerInteractions.Spectate.Interact.MouseButton1Click:Connect(function()
+		queueNotification("Simulation Notification","Simulating Spectate Notification for "..player.DisplayName..".")
+		-- Spectate
+	end)
+
+	newPlayer.PlayerInteractions.Locate.Interact.MouseButton1Click:Connect(function()
+		queueNotification("Simulation Notification","Simulating Locate ESP Notification for "..player.DisplayName..".")
+		-- ESP for that user only
+	end)
+end
+
+local function removePlayer(player)
+	if not checkSirius() then return end
+
+	if playerlistPanel.Interactions.List:FindFirstChild(player.Name) then
+		playerlistPanel.Interactions.List:FindFirstChild(player.Name):Destroy()
+	end
+end
+
+local function openSettings()
+	debounce = true
+
+	settingsPanel.BackgroundTransparency = 1
+	settingsPanel.Title.TextTransparency = 1
+	settingsPanel.Subtitle.TextTransparency = 1
+	settingsPanel.Back.ImageTransparency = 1
+	settingsPanel.Shadow.ImageTransparency = 1
+
+	wipeTransparency(settingsPanel.SettingTypes, 1, true)
+
+	settingsPanel.Visible = true
+	settingsPanel.UIGradient.Enabled = true
+	settingsPanel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	settingsPanel.UIGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.new(0.0470588, 0.0470588, 0.0470588)),ColorSequenceKeypoint.new(1, Color3.new(0.0470588, 0.0470588, 0.0470588))})
+	settingsPanel.UIGradient.Offset = Vector2.new(0, 1.7)
+	settingsPanel.SettingTypes.Visible = true
+	settingsPanel.SettingLists.Visible = false
+	settingsPanel.Size = UDim2.new(0, 550, 0, 340)
+	settingsPanel.Title.Position = UDim2.new(0.045, 0, 0.057, 0)
+
+	settingsPanel.Title.Text = "Settings"
+	settingsPanel.Subtitle.Text = "Adjust your preferences, set new keybinds, test out new features and more."
+
+	tweenService:Create(settingsPanel, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 613, 0, 384)}):Play()
+	tweenService:Create(settingsPanel, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 0}):Play()
+	tweenService:Create(settingsPanel.Shadow, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {ImageTransparency = 0.7}):Play()
+	tweenService:Create(settingsPanel.Title, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+	tweenService:Create(settingsPanel.Subtitle, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+
+	task.wait(0.1)
+
+	for _, settingType in ipairs(settingsPanel.SettingTypes:GetChildren()) do
+		if settingType.ClassName == "Frame" then
+			local gradientRotation = math.random(78, 95)
+
+			tweenService:Create(settingType.UIGradient, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Rotation = gradientRotation}):Play()
+			tweenService:Create(settingType.Shadow.UIGradient, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Rotation = gradientRotation}):Play()
+			tweenService:Create(settingType.UIStroke.UIGradient, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Rotation = gradientRotation}):Play()
+			tweenService:Create(settingType, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {BackgroundTransparency = 0}):Play()
+			tweenService:Create(settingType.Shadow, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {ImageTransparency = 0.7}):Play()
+			tweenService:Create(settingType.UIStroke, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Transparency = 0}):Play()
+			tweenService:Create(settingType.Title, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0.2}):Play()
+
+			task.wait(0.02)
+		end
+	end
+
+	for _, settingList in ipairs(settingsPanel.SettingLists:GetChildren()) do
+		if settingList.ClassName == "ScrollingFrame" then
+			for _, setting in ipairs(settingList:GetChildren()) do
+				if setting.ClassName == "Frame" then
+					setting.Visible = true
+				end
+			end
+		end
+	end
+
+	debounce = false
+end
+
+local function closeSettings()
+	debounce = true
+
+	for _, settingType in ipairs(settingsPanel.SettingTypes:GetChildren()) do
+		if settingType.ClassName == "Frame" then
+			tweenService:Create(settingType, TweenInfo.new(0.1, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+			tweenService:Create(settingType.Shadow, TweenInfo.new(0.05, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+			tweenService:Create(settingType.UIStroke, TweenInfo.new(0.05, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+			tweenService:Create(settingType.Title, TweenInfo.new(0.05, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+		end
+	end
+
+	tweenService:Create(settingsPanel.Shadow, TweenInfo.new(0.1, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+	tweenService:Create(settingsPanel.Back, TweenInfo.new(0.1, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+	tweenService:Create(settingsPanel.Title, TweenInfo.new(0.1, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+	tweenService:Create(settingsPanel.Subtitle, TweenInfo.new(0.1, Enum.EasingStyle.Quint), {TextTransparency = 1}):Play()
+
+	for _, settingList in ipairs(settingsPanel.SettingLists:GetChildren()) do
+		if settingList.ClassName == "ScrollingFrame" then
+			for _, setting in ipairs(settingList:GetChildren()) do
+				if setting.ClassName == "Frame" then
+					setting.Visible = false
+				end
+			end
+		end
+	end
+
+	tweenService:Create(settingsPanel, TweenInfo.new(0.4, Enum.EasingStyle.Quint), {Size = UDim2.new(0, 520, 0, 0)}):Play()
+	tweenService:Create(settingsPanel, TweenInfo.new(0.55, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play()
+
+	task.wait(0.55)
+
+	settingsPanel.Visible = false
+	debounce = false
+end
+
+local function saveSettings()
+	checkFolder()
+
+	if isfile and isfile(siriusValues.siriusFolder.."/"..siriusValues.settingsFile) then
+		writefile(siriusValues.siriusFolder.."/"..siriusValues.settingsFile, httpService:JSONEncode(siriusSettings))
+	end
+end
+
+local function assembleSettings()
+	if isfile and isfile(siriusValues.siriusFolder.."/"..siriusValues.settingsFile) then
+		local currentSettings
+
+		local success, response = pcall(function()
+			currentSettings = httpService:JSONDecode(readfile(siriusValues.siriusFolder.."/"..siriusValues.settingsFile))
+		end)
+
+		if success then
+			for _, liveCategory in ipairs(siriusSettings) do
+				for _, liveSetting in ipairs(liveCategory.categorySettings) do
+					for _, category in ipairs(currentSettings) do
+						for _, setting in ipairs(category.categorySettings) do
+							if liveSetting.id == setting.id then
+								liveSetting.current = setting.current
 							end
 						end
-						ActiveLabel.Text = #list > 0 and table.concat(list, ", ") or "..."
-					else
-						ActiveLabel.Text = tostring(Selected or "...")
-					end
-				end
-				
-				local function UpdateSelected()
-					if MultiSelect then
-						for _,v in pairs(Options) do
-							local nodes, Stats = v.nodes, v.Stats
-							CreateTween({nodes[2], "BackgroundTransparency", Stats and 0 or 0.8, 0.35})
-							CreateTween({nodes[2], "Size", Stats and UDim2.fromOffset(4, 12) or UDim2.fromOffset(4, 4), 0.35})
-							CreateTween({nodes[3], "TextTransparency", Stats and 0 or 0.4, 0.35})
-						end
-					else
-						for _,v in pairs(Options) do
-							local Slt = v.Value == Selected
-							local nodes = v.nodes
-							CreateTween({nodes[2], "BackgroundTransparency", Slt and 0 or 1, 0.35})
-							CreateTween({nodes[2], "Size", Slt and UDim2.fromOffset(4, 14) or UDim2.fromOffset(4, 4), 0.35})
-							CreateTween({nodes[3], "TextTransparency", Slt and 0 or 0.4, 0.35})
-						end
-					end
-					UpdateLabel()
-				end
-				
-				local function Select(Option)
-					if MultiSelect then
-						Option.Stats = not Option.Stats
-						Option.LastCB = tick()
-						
-						Selected[Option.Name] = Option.Stats
-						CallbackSelected()
-					else
-						Option.LastCB = tick()
-						
-						Selected = Option.Value
-						CallbackSelected()
-					end
-					UpdateSelected()
-				end
-				
-				AddOption = function(index, Value)
-					local Name = tostring(type(index) == "string" and index or Value)
-					
-					if Options[Name] then return end
-					Options[Name] = {
-						index = index,
-						Value = Value,
-						Name = Name,
-						Stats = false,
-						LastCB = 0
-					}
-					
-					if MultiSelect then
-						local Stats = Selected[Name]
-						Selected[Name] = Stats or false
-						Options[Name].Stats = Stats
-					end
-					
-					local Button = Make("Button", ScrollFrame, {
-						Name = "Option",
-						Size = UDim2.new(1, 0, 0, 21),
-						Position = UDim2.new(0, 0, 0.5),
-						AnchorPoint = Vector2.new(0, 0.5)
-					})Make("Corner", Button, UDim.new(0, 4))
-					
-					local IsSelected = InsertTheme(Create("Frame", Button, {
-						Position = UDim2.new(0, 1, 0.5),
-						Size = UDim2.new(0, 4, 0, 4),
-						BackgroundColor3 = Theme["Color Theme"],
-						BackgroundTransparency = 1,
-						AnchorPoint = Vector2.new(0, 0.5)
-					}), "Theme")Make("Corner", IsSelected, UDim.new(0.5, 0))
-					
-					local OptioneName = InsertTheme(Create("TextLabel", Button, {
-						Size = UDim2.new(1, 0, 1),
-						Position = UDim2.new(0, 10),
-						Text = Name,
-						TextColor3 = Theme["Color Text"],
-						Font = Enum.Font.GothamBold,
-						TextXAlignment = "Left",
-						BackgroundTransparency = 1,
-						TextTransparency = 0.4
-					}), "Text")
-					
-					Button.Activated:Connect(function()
-						Select(Options[Name])
-					end)
-					
-					Options[Name].nodes = {Button, IsSelected, OptioneName}
-				end
-				
-				RemoveOption = function(index, Value)
-					local Name = tostring(type(index) == "string" and index or Value)
-					if Options[Name] then
-						if MultiSelect then Selected[Name] = nil else Selected = nil end
-						Options[Name].nodes[1]:Destroy()
-						table.clear(Options[Name])
-						Options[Name] = nil
-					end
-				end
-				
-				GetOptions = function()
-					return Options
-				end
-				
-				AddNewOptions = function(List, Clear)
-					if Clear then
-						for k,v in pairs(Options, RemoveOption)
-					end
-					for k,v in pairs(List, AddOption)
-					CallbackSelected()
-					UpdateSelected()
-				end
-				
-				for k,v in pairs(DOptions, AddOption)
-				CallbackSelected()
-				UpdateSelected()
-			end
-			
-			Button.Activated:Connect(Minimize)
-			NoClickFrame.MouseButton1Down:Connect(Disable)
-			NoClickFrame.MouseButton1Click:Connect(Disable)
-			MainFrame:GetPropertyChangedSignal("Visible"):Connect(Disable)
-			SelectedFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(CalculatePos)
-			
-			Button.Activated:Connect(CalculateSize)
-			ScrollFrame.ChildAdded:Connect(CalculateSize)
-			ScrollFrame.ChildRemoved:Connect(CalculateSize)
-			CalculatePos()
-			CalculateSize()
-			
-			local Dropdown = {}
-			function Dropdown:Visible(...) Funcs:ToggleVisible(Button, ...) end
-			function Dropdown:Destroy() Button:Destroy() end
-			function Dropdown:Callback(...) Funcs:InsertCallback(Callback, ...)(Selected) end
-			
-			function Dropdown:Add(...)
-				local NewOptions = {...}
-				if type(NewOptions[1]) == "table" then
-					for k,v in pairs(Option, function(_,Name)
-						AddOption(Name)
-					end)
-				else
-					for k,v in pairs(NewOptions, function(_,Name)
-						AddOption(Name)
-					end)
-				end
-			end
-			function Dropdown:Remove(Option)
-				for index, Value in pairs(GetOptions()) do
-					if type(Option) == "number" and index == Option or Value.Name == "Option" then
-						RemoveOption(index, Value.Value)
 					end
 				end
 			end
-			function Dropdown:Select(Option)
-				if type(Option) == "string" then
-					for _,Val in pairs(Options) do
-						if Val.Name == Option then
-							Val.Active()
-						end
-					end
-				elseif type(Option) == "number" then
-					for ind,Val in pairs(Options) do
-						if ind == Option then
-							Val.Active()
-						end
-					end
-				end
-			end
-			function Dropdown:Set(Val1, Clear)
-				if type(Val1) == "table" then
-					AddNewOptions(Val1, not Clear)
-				elseif type(Val1) == "function" then
-					Callback = Val1
-				end
-			end
-			return Dropdown
+
+			writefile(siriusValues.siriusFolder.."/"..siriusValues.settingsFile, httpService:JSONEncode(siriusSettings)) -- Update file with any new settings added
 		end
-		function Tab:AddSlider(Configs)
-			local SName = Configs[1] or Configs.Name or Configs.Title or "Slider!"
-			local SDesc = Configs.Desc or Configs.Description or ""
-			local Min = Configs[2] or Configs.MinValue or Configs.Min or 10
-			local Max = Configs[3] or Configs.MaxValue or Configs.Max or 100
-			local Increase = Configs[4] or Configs.Increase or 1
-			local Callback = Funcs:GetCallback(Configs, 6)
-			local Flag = Configs[7] or Configs.Flag or false
-			local Default = Configs[5] or Configs.Default or 25
-			if CheckFlag(Flag) then Default = GetFlag(Flag) end
-			Min, Max = Min / Increase, Max / Increase
-			
-			local Button, LabelFunc = ButtonFrame(Container, SName, SDesc, UDim2.new(1, -180))
-			
-			local SliderHolder = Create("TextButton", Button, {
-				Size = UDim2.new(0.45, 0, 1),
-				Position = UDim2.new(1),
-				AnchorPoint = Vector2.new(1, 0),
-				AutoButtonColor = false,
-				Text = "",
-				BackgroundTransparency = 1
-			})
-			
-			local SliderBar = InsertTheme(Create("Frame", SliderHolder, {
-				BackgroundColor3 = Theme["Color Stroke"],
-				Size = UDim2.new(1, -20, 0, 6),
-				Position = UDim2.new(0.5, 0, 0.5),
-				AnchorPoint = Vector2.new(0.5, 0.5)
-			}), "Stroke")Make("Corner", SliderBar)
-			
-			local Indicator = InsertTheme(Create("Frame", SliderBar, {
-				BackgroundColor3 = Theme["Color Theme"],
-				Size = UDim2.fromScale(0.3, 1),
-				BorderSizePixel = 0
-			}), "Theme")Make("Corner", Indicator)
-			
-			local SliderIcon = Create("Frame", SliderBar, {
-				Size = UDim2.new(0, 6, 0, 12),
-				BackgroundColor3 = Color3.fromRGB(220, 220, 220),
-				Position = UDim2.fromScale(0.3, 0.5),
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				BackgroundTransparency = 0.2
-			})Make("Corner", SliderIcon)
-			
-			local LabelVal = InsertTheme(Create("TextLabel", SliderHolder, {
-				Size = UDim2.new(0, 14, 0, 14),
-				AnchorPoint = Vector2.new(1, 0.5),
-				Position = UDim2.new(0, 0, 0.5),
-				BackgroundTransparency = 1,
-				TextColor3 = Theme["Color Text"],
-				Font = Enum.Font.FredokaOne,
-				TextSize = 12
-			}), "Text")
-			
-			local UIScale = Create("UIScale", LabelVal)
-			
-			local BaseMousePos = Create("Frame", SliderBar, {
-				Position = UDim2.new(0, 0, 0.5, 0),
-				Visible = false
-			})
-			
-			local function UpdateLabel(NewValue)
-				local Number = tonumber(NewValue * Increase)
-				Number = math.floor(Number * 100) / 100
-				
-				Default, LabelVal.Text = Number, tostring(Number)
-				Funcs:FireCallback(Callback, Default)
+	else
+		if writefile then
+			checkFolder()
+			if not isfile(siriusValues.siriusFolder.."/"..siriusValues.settingsFile) then
+				writefile(siriusValues.siriusFolder.."/"..siriusValues.settingsFile, httpService:JSONEncode(siriusSettings))
 			end
-			
-			local function ControlPos()
-				local MousePos = Player:GetMouse()
-				local APos = MousePos.X - BaseMousePos.AbsolutePosition.X
-				local ConfigureDpiPos = APos / SliderBar.AbsoluteSize.X
-				
-				SliderIcon.Position = UDim2.new(math.clamp(ConfigureDpiPos, 0, 1), 0, 0.5, 0)
-			end
-			
-			local function UpdateValues()
-				Indicator.Size = UDim2.new(SliderIcon.Position.X.Scale, 0, 1, 0)
-				local SliderPos = SliderIcon.Position.X.Scale
-				local NewValue = math.floor(((SliderPos * Max) / Max) * (Max - Min) + Min)
-				UpdateLabel(NewValue)
-			end
-			
-			SliderHolder.MouseButton1Down:Connect(function()
-				CreateTween({SliderIcon, "Transparency", 0, 0.3})
-				Container.ScrollingEnabled = false
-				while UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do task.wait()
-					ControlPos()
-				end
-				CreateTween({SliderIcon, "Transparency", 0.2, 0.3})
-				Container.ScrollingEnabled = true
-				SetFlag(Flag, Default)
-			end)
-			
-			LabelVal:GetPropertyChangedSignal("Text"):Connect(function()
-				UIScale.Scale = 0.3
-				CreateTween({UIScale, "Scale", 1.2, 0.1})
-				CreateTween({LabelVal, "Rotation", math.random(-1, 1) * 5, 0.15, true})
-				CreateTween({UIScale, "Scale", 1, 0.2})
-				CreateTween({LabelVal, "Rotation", 0, 0.1})
-			end)
-			
-			function SetSlider(NewValue)
-				if type(NewValue) ~= "number" then return end
-				
-				local Min, Max = Min * Increase, Max * Increase
-				
-				local SliderPos = (NewValue - Min) / (Max - Min)
-				
-				SetFlag(Flag, NewValue)
-				CreateTween({ SliderIcon, "Position", UDim2.fromScale(math.clamp(SliderPos, 0, 1), 0.5), 0.3, true })
-			end;SetSlider(Default)
-			
-			SliderIcon:GetPropertyChangedSignal("Position"):Connect(UpdateValues)UpdateValues()
-			
-			local Slider = {}
-			function Slider:Set(NewVal1, NewVal2)
-				if NewVal1 and NewVal2 then
-					LabelFunc:SetTitle(NewVal1)
-					LabelFunc:SetDesc(NewVal2)
-				elseif type(NewVal1) == "string" then
-					LabelFunc:SetTitle(NewVal1)
-				elseif type(NewVal1) == "function" then
-					Callback = NewVal1
-				elseif type(NewVal1) == "number" then
-					SetSlider(NewVal1)
-				end
-			end
-			function Slider:Callback(...) Funcs:InsertCallback(Callback, ...)(tonumber(Default)) end
-			function Slider:Visible(...) Funcs:ToggleVisible(Button, ...) end
-			function Slider:Destroy() Button:Destroy() end
-			return Slider
-		end
-		function Tab:AddTextBox(Configs)
-			local TName = Configs[1] or Configs.Name or Configs.Title or "Text Box"
-			local TDesc = Configs.Desc or Configs.Description or ""
-			local TDefault = Configs[2] or Configs.Default or ""
-			local TPlaceholderText = Configs[5] or Configs.PlaceholderText or "Input"
-			local TClearText = Configs[3] or Configs.ClearText or false
-			local Callback = Funcs:GetCallback(Configs, 4)
-			
-			if type(TDefault) ~= "string" or TDefault:gsub(" ", ""):len() < 1 then
-				TDefault = false
-			end
-			
-			local Button, LabelFunc = ButtonFrame(Container, TName, TDesc, UDim2.new(1, -38))
-			
-			local SelectedFrame = InsertTheme(Create("Frame", Button, {
-				Size = UDim2.new(0, 150, 0, 18),
-				Position = UDim2.new(1, -10, 0.5),
-				AnchorPoint = Vector2.new(1, 0.5),
-				BackgroundColor3 = Theme["Color Stroke"]
-			}), "Stroke")Make("Corner", SelectedFrame, UDim.new(0, 4))
-			
-			local TextBoxInput = InsertTheme(Create("TextBox", SelectedFrame, {
-				Size = UDim2.new(0.85, 0, 0.85, 0),
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.new(0.5, 0, 0.5, 0),
-				BackgroundTransparency = 1,
-				Font = Enum.Font.GothamBold,
-				TextScaled = true,
-				TextColor3 = Theme["Color Text"],
-				ClearTextOnFocus = TClearText,
-				PlaceholderText = TPlaceholderText,
-				Text = ""
-			}), "Text")
-			
-			local Pencil = Create("ImageLabel", SelectedFrame, {
-				Size = UDim2.new(0, 12, 0, 12),
-				Position = UDim2.new(0, -5, 0.5),
-				AnchorPoint = Vector2.new(1, 0.5),
-				Image = "rbxassetid://15637081879",
-				BackgroundTransparency = 1
-			})
-			
-			local TextBox = {}
-			local function Input()
-				local Text = TextBoxInput.Text
-				if Text:gsub(" ", ""):len() > 0 then
-					if TextBox.OnChanging then Text = TextBox.OnChanging(Text) or Text end
-					Funcs:FireCallback(Callback, Text)
-					TextBoxInput.Text = Text
-				end
-			end
-			
-			TextBoxInput.FocusLost:Connect(Input)Input()
-			
-			TextBoxInput.FocusLost:Connect(function()
-				CreateTween({Pencil, "ImageColor3", Color3.fromRGB(255, 255, 255), 0.2})
-			end)
-			TextBoxInput.Focused:Connect(function()
-				CreateTween({Pencil, "ImageColor3", Theme["Color Theme"], 0.2})
-			end)
-			
-			TextBox.OnChanging = false
-			function TextBox:Visible(...) Funcs:ToggleVisible(Button, ...) end
-			function TextBox:Destroy() Button:Destroy() end
-			return TextBox
-		end
-		function Tab:AddDiscordInvite(Configs)
-			local Title = Configs[1] or Configs.Name or Configs.Title or "Discord"
-			local Desc = Configs.Desc or Configs.Description or ""
-			local Logo = Configs[2] or Configs.Logo or ""
-			local Invite = Configs[3] or Configs.Invite or ""
-			
-			local InviteHolder = Create("Frame", Container, {
-				Size = UDim2.new(1, 0, 0, 80),
-				Name = "Option",
-				BackgroundTransparency = 1
-			})
-			
-			local InviteLabel = Create("TextLabel", InviteHolder, {
-				Size = UDim2.new(1, 0, 0, 15),
-				Position = UDim2.new(0, 5),
-				TextColor3 = Color3.fromRGB(40, 150, 255),
-				Font = Enum.Font.GothamBold,
-				TextXAlignment = "Left",
-				BackgroundTransparency = 1,
-				TextSize = 10,
-				Text = Invite
-			})
-			
-			local FrameHolder = InsertTheme(Create("Frame", InviteHolder, {
-				Size = UDim2.new(1, 0, 0, 65),
-				AnchorPoint = Vector2.new(0, 1),
-				Position = UDim2.new(0, 0, 1),
-				BackgroundColor3 = Theme["Color Hub 2"]
-			}), "Frame")Make("Corner", FrameHolder)
-			
-			local ImageLabel = Create("ImageLabel", FrameHolder, {
-				Size = UDim2.new(0, 30, 0, 30),
-				Position = UDim2.new(0, 7, 0, 7),
-				Image = Logo,
-				BackgroundTransparency = 1
-			})Make("Corner", ImageLabel, UDim.new(0, 4))Make("Stroke", ImageLabel)
-			
-			local LTitle = InsertTheme(Create("TextLabel", FrameHolder, {
-				Size = UDim2.new(1, -52, 0, 15),
-				Position = UDim2.new(0, 44, 0, 7),
-				Font = Enum.Font.GothamBold,
-				TextColor3 = Theme["Color Text"],
-				TextXAlignment = "Left",
-				BackgroundTransparency = 1,
-				TextSize = 10,
-				Text = Title
-			}), "Text")
-			
-			local LDesc = InsertTheme(Create("TextLabel", FrameHolder, {
-				Size = UDim2.new(1, -52, 0, 0),
-				Position = UDim2.new(0, 44, 0, 22),
-				TextWrapped = "Y",
-				AutomaticSize = "Y",
-				Font = Enum.Font.Gotham,
-				TextColor3 = Theme["Color Dark Text"],
-				TextXAlignment = "Left",
-				BackgroundTransparency = 1,
-				TextSize = 8,
-				Text = Desc
-			}), "DarkText")
-			
-			local JoinButton = Create("TextButton", FrameHolder, {
-				Size = UDim2.new(1, -14, 0, 16),
-				AnchorPoint = Vector2.new(0.5, 1),
-				Position = UDim2.new(0.5, 0, 1, -7),
-				Text = "Join",
-				Font = Enum.Font.GothamBold,
-				TextSize = 12,
-				TextColor3 = Color3.fromRGB(220, 220, 220),
-				BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-			})Make("Corner", JoinButton, UDim.new(0, 5))
-			
-			local ClickDelay
-			JoinButton.Activated:Connect(function()
-				setclipboard(Invite)
-				if ClickDelay then return end
-				
-				ClickDelay = true
-				SetProps(JoinButton, {
-					Text = "Copied to Clipboard",
-					BackgroundColor3 = Color3.fromRGB(100, 100, 100),
-					TextColor3 = Color3.fromRGB(150, 150, 150)
-				})task.wait(5)
-				SetProps(JoinButton, {
-					Text = "Join",
-					BackgroundColor3 = Color3.fromRGB(50, 150, 50),
-					TextColor3 = Color3.fromRGB(220, 220, 220)
-				})ClickDelay = false
-			end)
-			
-			local DiscordInvite = {}
-			function DiscordInvite:Destroy() InviteHolder:Destroy() end
-			function DiscordInvite:Visible(...) Funcs:ToggleVisible(InviteHolder, ...) end
-			return DiscordInvite
-		end
-		return Tab
+		end 
 	end
-	
-	CloseButton.Activated:Connect(Window.CloseBtn)
-	MinimizeButton.Activated:Connect(Window.MinimizeBtn)
-	return Window
+
+	for _, category in siriusSettings do
+		local newCategory = settingsPanel.SettingTypes.Template:Clone()
+		newCategory.Name = category.name
+		newCategory.Title.Text = string.upper(category.name)
+		newCategory.Parent = settingsPanel.SettingTypes
+		newCategory.UIGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.new(0.0392157, 0.0392157, 0.0392157)),ColorSequenceKeypoint.new(1, category.color)})
+
+		newCategory.Visible = true
+
+		local hue, sat, val = Color3.toHSV(category.color)
+
+		hue = math.clamp(hue + 0.01, 0, 1) sat = math.clamp(sat + 0.1, 0, 1) val = math.clamp(val + 0.2, 0, 1)
+
+		local newColor = Color3.fromHSV(hue, sat, val)
+		newCategory.UIStroke.UIGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.new(0.117647, 0.117647, 0.117647)),ColorSequenceKeypoint.new(1, newColor)})
+		newCategory.Shadow.UIGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.new(0.117647, 0.117647, 0.117647)),ColorSequenceKeypoint.new(1, newColor)})
+
+		local newList = settingsPanel.SettingLists.Template:Clone()
+		newList.Name = category.name
+		newList.Parent = settingsPanel.SettingLists
+
+		newList.Visible = true
+
+		for _, obj in ipairs(newList:GetChildren()) do if obj.Name ~= "Placeholder" and obj.Name ~= "UIListLayout" then obj:Destroy() end end 
+
+		settingsPanel.Back.MouseButton1Click:Connect(function()
+			tweenService:Create(settingsPanel.Back, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {ImageTransparency = 1}):Play()
+			tweenService:Create(settingsPanel.Back, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0.002, 0, 0.052, 0)}):Play()
+			tweenService:Create(settingsPanel.Title, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0.045, 0, 0.057, 0)}):Play()
+			tweenService:Create(settingsPanel.UIGradient, TweenInfo.new(1, Enum.EasingStyle.Exponential), {Offset = Vector2.new(0, 1.3)}):Play()
+			settingsPanel.Title.Text = "Settings"
+			settingsPanel.Subtitle.Text = "Adjust your preferences, set new keybinds, test out new features and more"
+			settingsPanel.SettingTypes.Visible = true
+			settingsPanel.SettingLists.Visible = false
+		end)
+
+		newCategory.Interact.MouseButton1Click:Connect(function()
+			if settingsPanel.SettingLists:FindFirstChild(category.name) then
+				settingsPanel.UIGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.new(0.0470588, 0.0470588, 0.0470588)),ColorSequenceKeypoint.new(1, category.color)})
+				settingsPanel.SettingTypes.Visible = false
+				settingsPanel.SettingLists.Visible = true
+				settingsPanel.SettingLists.UIPageLayout:JumpTo(settingsPanel.SettingLists[category.name])
+				settingsPanel.Subtitle.Text = category.description
+				settingsPanel.Back.Visible = true
+				settingsPanel.Title.Text = category.name
+
+				local gradientRotation = math.random(78, 95)
+				settingsPanel.UIGradient.Rotation = gradientRotation
+				tweenService:Create(settingsPanel.UIGradient, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {Offset = Vector2.new(0, 0.65)}):Play()
+				tweenService:Create(settingsPanel.Back, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {ImageTransparency = 0}):Play()
+				tweenService:Create(settingsPanel.Back, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0.041, 0, 0.052, 0)}):Play()
+				tweenService:Create(settingsPanel.Title, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {Position = UDim2.new(0.091, 0, 0.057, 0)}):Play()
+			else
+				-- error
+				closeSettings()
+			end
+		end)
+
+		newCategory.MouseEnter:Connect(function()
+			tweenService:Create(newCategory.Title, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
+			tweenService:Create(newCategory.UIGradient, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {Offset = Vector2.new(0, 0.4)}):Play()
+			tweenService:Create(newCategory.UIStroke.UIGradient, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {Offset = Vector2.new(0, 0.2)}):Play()
+			tweenService:Create(newCategory.Shadow.UIGradient, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {Offset = Vector2.new(0, 0.2)}):Play()
+		end)
+
+		newCategory.MouseLeave:Connect(function()
+			tweenService:Create(newCategory.Title, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {TextTransparency = 0.2}):Play()
+			tweenService:Create(newCategory.UIGradient, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {Offset = Vector2.new(0, 0.65)}):Play()
+			tweenService:Create(newCategory.UIStroke.UIGradient, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {Offset = Vector2.new(0, 0.4)}):Play()
+			tweenService:Create(newCategory.Shadow.UIGradient, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {Offset = Vector2.new(0, 0.4)}):Play()
+		end)
+
+		for _, setting in ipairs(category.categorySettings) do
+			if not setting.hidden then
+				local settingType = setting.settingType
+				local minimumLicense = setting.minimumLicense
+				local object = nil
+
+				if settingType == "Boolean" then
+					local newSwitch = settingsPanel.SettingLists.Template.SwitchTemplate:Clone()
+					object = newSwitch
+					newSwitch.Name = setting.name
+					newSwitch.Parent = newList
+					newSwitch.Visible = true
+					newSwitch.Title.Text = setting.name
+
+					if setting.current == true then
+						newSwitch.Switch.Indicator.Position = UDim2.new(1, -20, 0.5, 0)
+						newSwitch.Switch.Indicator.UIStroke.Color = Color3.fromRGB(220, 220, 220)
+						newSwitch.Switch.Indicator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)			
+						newSwitch.Switch.Indicator.BackgroundTransparency = 0.6
+					end
+
+
+					if minimumLicense then
+						if (minimumLicense == "Pro" and not Pro) or (minimumLicense == "Essential" and not (Pro or Essential)) then
+							newSwitch.Switch.Indicator.Position = UDim2.new(1, -40, 0.5, 0)
+							newSwitch.Switch.Indicator.UIStroke.Color = Color3.fromRGB(255, 255, 255)
+							newSwitch.Switch.Indicator.BackgroundColor3 = Color3.fromRGB(235, 235, 235)			
+							newSwitch.Switch.Indicator.BackgroundTransparency = 0.75
+						end
+					end
+
+					newSwitch.Interact.MouseButton1Click:Connect(function()
+						if minimumLicense then
+							if (minimumLicense == "Pro" and not Pro) or (minimumLicense == "Essential" and not (Pro or Essential)) then
+								queueNotification("This feature is locked", "You must be "..minimumLicense.." or higher to use "..setting.name..". \n\nUpgrade at https://sirius.menu.", 4483345875)
+								return
+							end
+						end
+
+						setting.current = not setting.current
+						saveSettings()
+						if setting.current == true then
+							tweenService:Create(newSwitch.Switch.Indicator, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(1, -20, 0.5, 0)}):Play()
+							tweenService:Create(newSwitch.Switch.Indicator, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0,12,0,12)}):Play()
+							tweenService:Create(newSwitch.Switch.Indicator.UIStroke, TweenInfo.new(0.55, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Color = Color3.fromRGB(200, 200, 200)}):Play()
+							tweenService:Create(newSwitch.Switch.Indicator, TweenInfo.new(0.8, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+							tweenService:Create(newSwitch.Switch.Indicator.UIStroke, TweenInfo.new(0.55, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Transparency = 0.5}):Play()
+							tweenService:Create(newSwitch.Switch.Indicator, TweenInfo.new(0.55, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0.6}):Play()
+							task.wait(0.05)
+							tweenService:Create(newSwitch.Switch.Indicator, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0,17,0,17)}):Play()							
+						else
+							tweenService:Create(newSwitch.Switch.Indicator, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(1, -40, 0.5, 0)}):Play()
+							tweenService:Create(newSwitch.Switch.Indicator, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0,12,0,12)}):Play()
+							tweenService:Create(newSwitch.Switch.Indicator.UIStroke, TweenInfo.new(0.55, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Color = Color3.fromRGB(255, 255, 255)}):Play()
+							tweenService:Create(newSwitch.Switch.Indicator.UIStroke, TweenInfo.new(0.55, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Transparency = 0.7}):Play()
+							tweenService:Create(newSwitch.Switch.Indicator, TweenInfo.new(0.8, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(235, 235, 235)}):Play()
+							tweenService:Create(newSwitch.Switch.Indicator, TweenInfo.new(0.55, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0.75}):Play()
+							task.wait(0.05)
+							tweenService:Create(newSwitch.Switch.Indicator, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0,17,0,17)}):Play()
+						end
+					end)
+
+				elseif settingType == "Input" then
+					local newInput = settingsPanel.SettingLists.Template.InputTemplate:Clone()
+					object = newInput
+
+					newInput.Name = setting.name
+					newInput.InputFrame.InputBox.Text = setting.current
+					newInput.InputFrame.InputBox.PlaceholderText = setting.placeholder or "input"
+					newInput.Parent = newList
+
+					if string.len(setting.current) > 19 then
+						newInput.InputFrame.InputBox.Text = string.sub(tostring(setting.current), 1,17)..".."
+					else
+						newInput.InputFrame.InputBox.Text = setting.current
+					end
+
+					newInput.Visible = true
+					newInput.Title.Text = setting.name
+					newInput.InputFrame.InputBox.TextWrapped = false
+					newInput.InputFrame.Size = UDim2.new(0, newInput.InputFrame.InputBox.TextBounds.X + 24, 0, 30)
+
+					newInput.InputFrame.InputBox.FocusLost:Connect(function()
+						if minimumLicense then
+							if (minimumLicense == "Pro" and not Pro) or (minimumLicense == "Essential" and not (Pro or Essential)) then
+								queueNotification("This feature is locked", "You must be "..minimumLicense.." or higher to use "..setting.name..". \n\nUpgrade at https://sirius.menu.", 4483345875)
+								newInput.InputFrame.InputBox.Text = setting.current
+								return
+							end
+						end
+
+						if newInput.InputFrame.InputBox.Text ~= nil or "" then
+							setting.current = newInput.InputFrame.InputBox.Text
+							saveSettings()
+						end
+						if string.len(setting.current) > 24 then
+							newInput.InputFrame.InputBox.Text = string.sub(tostring(setting.current), 1,22)..".."
+						else
+							newInput.InputFrame.InputBox.Text = setting.current
+						end
+					end)
+
+					newInput.InputFrame.InputBox:GetPropertyChangedSignal("Text"):Connect(function()
+						tweenService:Create(newInput.InputFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, newInput.InputFrame.InputBox.TextBounds.X + 24, 0, 30)}):Play()
+					end)
+
+				elseif settingType == "Number" then
+					local newInput = settingsPanel.SettingLists.Template.InputTemplate:Clone()
+					object = newInput
+
+					newInput.Name = setting.name
+					newInput.InputFrame.InputBox.Text = tostring(setting.current)
+					newInput.InputFrame.InputBox.PlaceholderText = setting.placeholder or "number"
+					newInput.Parent = newList
+
+					if string.len(setting.current) > 19 then
+						newInput.InputFrame.InputBox.Text = string.sub(tostring(setting.current), 1,17)..".."
+					else
+						newInput.InputFrame.InputBox.Text = setting.current
+					end
+
+					newInput.Visible = true
+					newInput.Title.Text = setting.name
+					newInput.InputFrame.InputBox.TextWrapped = false
+					newInput.InputFrame.Size = UDim2.new(0, newInput.InputFrame.InputBox.TextBounds.X + 24, 0, 30)
+
+					newInput.InputFrame.InputBox.FocusLost:Connect(function()
+
+						if minimumLicense then
+							if (minimumLicense == "Pro" and not Pro) or (minimumLicense == "Essential" and not (Pro or Essential)) then
+								queueNotification("This feature is locked", "You must be "..minimumLicense.." or higher to use "..setting.name..". \n\nUpgrade at https://sirius.menu.", 4483345875)
+								newInput.InputFrame.InputBox.Text = setting.current
+								return
+							end
+						end
+
+						local inputValue = tonumber(newInput.InputFrame.InputBox.Text)
+
+						if inputValue then
+							if setting.values then
+								local minValue = setting.values[1]
+								local maxValue = setting.values[2]
+
+								if inputValue < minValue then
+									setting.current = minValue
+								elseif inputValue > maxValue then
+									setting.current = maxValue
+								else
+									setting.current = inputValue
+								end
+
+								saveSettings()
+							else
+								setting.current = inputValue
+								saveSettings()
+							end
+						else
+							newInput.InputFrame.InputBox.Text = tostring(setting.current)
+						end
+
+						if string.len(setting.current) > 24 then
+							newInput.InputFrame.InputBox.Text = string.sub(tostring(setting.current), 1,22)..".."
+						else
+							newInput.InputFrame.InputBox.Text = tostring(setting.current)
+						end
+					end)
+
+					newInput.InputFrame.InputBox:GetPropertyChangedSignal("Text"):Connect(function()
+						tweenService:Create(newInput.InputFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, newInput.InputFrame.InputBox.TextBounds.X + 24, 0, 30)}):Play()
+					end)
+
+				elseif settingType == "Key" then
+					local newKeybind = settingsPanel.SettingLists.Template.InputTemplate:Clone()
+					object = newKeybind
+					newKeybind.Name = setting.name
+					newKeybind.InputFrame.InputBox.PlaceholderText = setting.placeholder or "listening.."
+					newKeybind.InputFrame.InputBox.Text = setting.current or "No Keybind"
+					newKeybind.Parent = newList
+
+					newKeybind.Visible = true
+					newKeybind.Title.Text = setting.name
+					newKeybind.InputFrame.InputBox.TextWrapped = false
+					newKeybind.InputFrame.Size = UDim2.new(0, newKeybind.InputFrame.InputBox.TextBounds.X + 24, 0, 30)
+
+					newKeybind.InputFrame.InputBox.FocusLost:Connect(function()
+						checkingForKey = false
+
+						if minimumLicense then
+							if (minimumLicense == "Pro" and not Pro) or (minimumLicense == "Essential" and not (Pro or Essential)) then
+								queueNotification("This feature is locked", "You must be "..minimumLicense.." or higher to use "..setting.name..". \n\nUpgrade at https://sirius.menu.", 4483345875)
+								newKeybind.InputFrame.InputBox.Text = setting.current
+								return
+							end
+						end
+
+						if newKeybind.InputFrame.InputBox.Text == nil or newKeybind.InputFrame.InputBox.Text == "" then
+							newKeybind.InputFrame.InputBox.Text = "No Keybind"
+							setting.current = nil
+							newKeybind.InputFrame.InputBox:ReleaseFocus()
+							saveSettings()
+						end
+					end)
+
+					newKeybind.InputFrame.InputBox.Focused:Connect(function()
+						checkingForKey = {data = setting, object = newKeybind}
+						newKeybind.InputFrame.InputBox.Text = ""
+					end)
+
+					newKeybind.InputFrame.InputBox:GetPropertyChangedSignal("Text"):Connect(function()
+						tweenService:Create(newKeybind.InputFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, newKeybind.InputFrame.InputBox.TextBounds.X + 24, 0, 30)}):Play()
+					end)
+
+				end
+
+				if object then
+					if setting.description then
+						object.Description.Visible = true
+						object.Description.TextWrapped = true
+						object.Description.Size = UDim2.new(0, 333, 5, 0)
+						object.Description.Size = UDim2.new(0, 333, 0, 999)
+						object.Description.Text = setting.description
+						object.Description.Size = UDim2.new(0, 333, 0, object.Description.TextBounds.Y + 10)
+						object.Size = UDim2.new(0, 558, 0, object.Description.TextBounds.Y + 44)
+					end
+
+					if minimumLicense then
+						object.LicenseDisplay.Visible = true
+						object.Title.Position = UDim2.new(0, 18, 0, 26)
+						object.Description.Position = UDim2.new(0, 18, 0, 43)
+						object.Size = UDim2.new(0, 558, 0, object.Size.Y.Offset + 13)
+						object.LicenseDisplay.Text = string.upper(minimumLicense).." FEATURE"
+					end
+
+					local objectTouching
+					object.MouseEnter:Connect(function()
+						objectTouching = true
+						tweenService:Create(object.UIStroke, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Transparency = 0.45}):Play()
+						tweenService:Create(object, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0.83}):Play()
+					end)
+
+					object.MouseLeave:Connect(function()
+						objectTouching = false
+						tweenService:Create(object.UIStroke, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Transparency = 0.6}):Play()
+						tweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0.9}):Play()
+					end)
+
+					if object:FindFirstChild('Interact') then
+						object.Interact.MouseButton1Click:Connect(function()
+							tweenService:Create(object.UIStroke, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Transparency = 1}):Play()
+							tweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0.8}):Play()
+							task.wait(0.1)
+							if objectTouching then
+								tweenService:Create(object.UIStroke, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Transparency = 0.45}):Play()
+								tweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0.83}):Play()
+							else
+								tweenService:Create(object.UIStroke, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Transparency = 0.6}):Play()
+								tweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0.9}):Play()
+							end
+						end)
+					end
+				end
+			end
+		end
+	end
 end
 
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local function initialiseAntiKick()
+	if checkSetting("Client-Based Anti Kick").current then
+		if hookmetamethod then 
+			local originalIndex
+			local originalNamecall
 
-            -- Tab Home
-local HomeTab = Window:MakeTab({ "Home", "home" })
+			originalIndex = hookmetamethod(game, "__index", function(self, method)
+				if self == localPlayer and method:lower() == "kick" and checkSetting("Client-Based Anti Kick").current and checkSirius() then
+					queueNotification("Kick Prevented", "Sirius has prevented you from being kicked by the client.", 4400699701)
+					return error("Expected ':' not '.' calling member function Kick", 2)
+				end
+				return originalIndex(self, method)
+			end)
 
--- Labels
-local fpsLabelFrame, fpsLabel = HomeTab:AddLabel("FPS: ...")
-local timeLabelFrame, timeLabel = HomeTab:AddLabel("Time Plays: 00:00")
-local friendsLabelFrame, friendsLabel = HomeTab:AddLabel("Friends online: ... / offline: ...")
-
--- FPS update
-local accumulator, frames, fps = 0, 0, 0
-RunService.RenderStepped:Connect(function(dt)
-    frames += 1
-    accumulator += dt
-    if accumulator >= 0.5 then
-        fps = math.floor(frames / accumulator + 0.5)
-        frames, accumulator = 0, 0
-        pcall(function() fpsLabel:SetTitle("FPS: " .. tostring(fps)) end)
-    end
-end)
-
--- Session time update
-local startTime = tick()
-RunService.Heartbeat:Connect(function()
-    local elapsed = math.floor(tick() - startTime)
-    local m = math.floor(elapsed / 60)
-    local s = elapsed % 60
-    pcall(function() timeLabel:SetTitle(string.format("Time Plays: %02d:%02d", m, s)) end)
-end)
-
--- Friends update
-local function updateFriends()
-    local onlineCount, totalCount = 0, 0
-    local success, friends = pcall(function()
-        if Players and Players.GetFriendsAsync then
-            local t = {}
-            local pages = Players:GetFriendsAsync(LocalPlayer.UserId)
-            for _,v in ipairs(pages:GetCurrentPage()) do
-                table.insert(t, v)
-            end
-            return t
-        end
-    end)
-    if success and friends and #friends > 0 then
-        totalCount = #friends
-        for _,f in ipairs(friends) do
-            if f.IsOnline then onlineCount += 1 end
-        end
-    else
-        totalCount = #Players:GetPlayers()
-        onlineCount = totalCount
-    end
-    pcall(function() friendsLabel:SetTitle(("Friends online: %d / offline: %d"):format(onlineCount, totalCount - onlineCount)) end)
+			originalNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+				if self == localPlayer and getnamecallmethod():lower() == "kick" and checkSetting("Client-Based Anti Kick").current and checkSirius() then
+					queueNotification("Kick Prevented", "Sirius has prevented you from being kicked by the client.", 4400699701)
+					return
+				end
+				return originalNamecall(self, ...)
+			end)
+		end
+	end
 end
 
-updateFriends()
-task.spawn(function()
-    while true do
-        task.wait(30)
-        updateFriends()
-    end
+local function boost()
+	local success, result = pcall(function()
+		loadstring(game:HttpGet('https://raw.githubusercontent.com/SiriusSoftwareLtd/Sirius/refs/heads/request/boost.lua'))()
+	end)
+
+	if not success then
+		print('Error with boost file.')
+		print(result)
+	end
+end
+
+local function start()
+	if siriusValues.releaseType == "Experimental" then -- Make this more secure.
+		if not Pro then localPlayer:Kick("This is an experimental release, you must be Pro to run this. \n\nUpgrade at https://sirius.menu/") return end
+	end
+	windowFocusChanged(true)
+
+	UI.Enabled = true
+
+	assembleSettings()
+	ensureFrameProperties()
+	sortActions()
+	initialiseAntiKick()
+	checkLastVersion()
+	task.spawn(boost)
+
+	smartBar.Time.Text = os.date("%H")..":"..os.date("%M")
+
+	toggle.Visible = not checkSetting("Hide Toggle Button").current
+
+	if not checkSetting("Load Hidden").current then 
+		--if checkSetting("Startup Sound Effect").current then
+		--	local startupPath = siriusValues.siriusFolder.."/Assets/startup.wav"
+		--	local startupAsset
+
+		--	if isfile(startupPath) then
+		--		startupAsset = getcustomasset(startupPath) or nil
+		--	else
+		--		startupAsset = fetchFromCDN("startup.wav", true, "Assets/startup.wav")
+		--		startupAsset = isfile(startupPath) and getcustomasset(startupPath) or nil
+		--	end
+
+		--	if not startupAsset then return end
+
+		--	local startupSound = Instance.new("Sound")
+		--	startupSound.Parent = UI
+		--	startupSound.SoundId = startupAsset
+		--	startupSound.Name = "startupSound"
+		--	startupSound.Volume = 0.85
+		--	startupSound.PlayOnRemove = true
+		--	startupSound:Destroy()	
+		--end
+
+		openSmartBar()
+	else 
+		closeSmartBar() 
+	end
+
+	if script_key and not (Essential or Pro) then
+		queueNotification("License Error", "We've detected a key being placed above Sirius loadstring, however your key seems to be invalid. Make a support request at sirius.menu/discord to get this solved within minutes.", "document-minus")
+	end
+
+	if siriusValues.enableExperienceSync then
+		task.spawn(syncExperienceInformation) 
+	end
+end
+
+-- Sirius Events
+
+start()
+
+toggle.MouseButton1Click:Connect(function()
+	if smartBarOpen then
+		closeSmartBar()
+	else
+		openSmartBar()
+	end
 end)
-            local fpsLabel = HomeTab:AddLabel("FPS: ...")
-            local timeLabel = HomeTab:AddLabel("Time Plays: 00:00")
-            local friendsLabel = HomeTab:AddLabel("Friends online: ... / offline: ...")
 
-            -- FPS update
-            local accumulator, frames, fps = 0, 0, 0
-            RunService.RenderStepped:Connect(function(dt)
-                frames = frames + 1
-                accumulator = accumulator + dt
-                if accumulator >= 0.5 then
-                    fps = math.floor(frames / accumulator + 0.5)
-                    frames, accumulator = 0, 0
-                    pcall(function() fpsLabel:Set("FPS: "..tostring(fps)) end)
-                end
-            end)
+characterPanel.Interactions.Reset.MouseButton1Click:Connect(function()
+	resetSliders()
 
-            -- Session time update
-            local startTime = tick()
-            RunService.Heartbeat:Connect(function()
-                local elapsed = math.floor(tick() - startTime)
-                local m = math.floor(elapsed / 60)
-                local s = elapsed % 60
-                pcall(function() timeLabel:Set(string.format("Time Plays: %02d:%02d", m, s)) end)
-            end)
-
-            -- Friends update (best-effort)
-            local function updateFriends()
-                local onlineCount, totalCount = 0, 0
-                local success, friends = pcall(function()
-                    if Players and Players.GetFriendsAsync then
-                        local t = {}
-                        local pages = Players:GetFriendsAsync(LocalPlayer.UserId)
-                        if type(pages) == "table" then
-                            for _,v in pairs(pages) do table.insert(t, v) end
-                        end
-                        return t
-                    end
-                    return nil
-                end)
-                if success and friends and type(friends) == "table" and #friends > 0 then
-                    totalCount = #friends
-                    for _,f in ipairs(friends) do
-                        if f.Online then onlineCount = onlineCount + 1 end
-                    end
-                else
-                    totalCount = #Players:GetPlayers()
-                    onlineCount = #Players:GetPlayers()
-                end
-                pcall(function() friendsLabel:Set("Friends online: "..onlineCount.." / offline: "..(totalCount - onlineCount)) end)
-            end
-
-            updateFriends()
-            spawn(function()
-                while true do
-                    wait(30)
-                    updateFriends()
-                end
-            end)
-        end
-    end)
+	characterPanel.Interactions.Reset.Rotation = 360
+	queueNotification("Slider Values Reset","Successfully reset all character panel sliders", 4400696294)
+	tweenService:Create(characterPanel.Interactions.Reset, TweenInfo.new(.5,Enum.EasingStyle.Back),  {Rotation = 0}):Play()
 end)
 
-return redzlib
+characterPanel.Interactions.Reset.MouseEnter:Connect(function() if debounce then return end tweenService:Create(characterPanel.Interactions.Reset, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {ImageTransparency = 0}):Play() end)
+characterPanel.Interactions.Reset.MouseLeave:Connect(function() if debounce then return end tweenService:Create(characterPanel.Interactions.Reset, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {ImageTransparency = 0.7}):Play() end)
+
+local playerSearch = playerlistPanel.Interactions.SearchFrame.SearchBox -- move this up to Variables once finished
+
+playerSearch:GetPropertyChangedSignal("Text"):Connect(function()
+	local query = string.lower(playerSearch.Text)
+
+	for _, player in ipairs(playerlistPanel.Interactions.List:GetChildren()) do
+		if player.ClassName == "Frame" and player.Name ~= "Placeholder" and player.Name ~= "Template" then
+			if string.find(player.Name, playerSearch.Text) then
+				player.Visible = true
+			else
+				player.Visible = false
+			end
+		end
+	end
+
+	if #playerSearch.Text == 0 then
+		searchingForPlayer = false
+		for _, player in ipairs(playerlistPanel.Interactions.List:GetChildren()) do
+			if player.ClassName == "Frame" and player.Name ~= "Placeholder" and player.Name ~= "Template" then
+				player.Visible = true
+			end
+		end
+	else
+		searchingForPlayer = true
+	end
+end)
+
+characterPanel.Interactions.Serverhop.MouseEnter:Connect(function()
+	if debounce then return end
+	tweenService:Create(characterPanel.Interactions.Serverhop, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {BackgroundTransparency = 0.5}):Play()
+	tweenService:Create(characterPanel.Interactions.Serverhop.Title, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 0.1}):Play()
+	tweenService:Create(characterPanel.Interactions.Serverhop.UIStroke, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {Transparency = 1}):Play()
+end)
+
+characterPanel.Interactions.Serverhop.MouseLeave:Connect(function()
+	if debounce then return end
+	tweenService:Create(characterPanel.Interactions.Serverhop, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {BackgroundTransparency = 0}):Play()
+	tweenService:Create(characterPanel.Interactions.Serverhop.Title, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 0.5}):Play()
+	tweenService:Create(characterPanel.Interactions.Serverhop.UIStroke, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {Transparency = 0}):Play()
+end)
+
+characterPanel.Interactions.Rejoin.MouseEnter:Connect(function()
+	if debounce then return end
+	tweenService:Create(characterPanel.Interactions.Rejoin, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {BackgroundTransparency = 0.5}):Play()
+	tweenService:Create(characterPanel.Interactions.Rejoin.Title, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 0.1}):Play()
+	tweenService:Create(characterPanel.Interactions.Rejoin.UIStroke, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {Transparency = 1}):Play()
+end)
+
+characterPanel.Interactions.Rejoin.MouseLeave:Connect(function()
+	if debounce then return end
+	tweenService:Create(characterPanel.Interactions.Rejoin, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {BackgroundTransparency = 0}):Play()
+	tweenService:Create(characterPanel.Interactions.Rejoin.Title, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 0.5}):Play()
+	tweenService:Create(characterPanel.Interactions.Rejoin.UIStroke, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {Transparency = 0}):Play()
+end)
+
+musicPanel.Close.MouseButton1Click:Connect(function()
+	if musicPanel.Visible and not debounce then
+		closeMusic()
+	end
+end)
+
+musicPanel.Add.Interact.MouseButton1Click:Connect(function()
+	musicPanel.AddBox.Input:ReleaseFocus()
+	addToQueue(musicPanel.AddBox.Input.Text)
+end)
+
+musicPanel.Menu.TogglePlaying.MouseButton1Click:Connect(function()
+	if currentAudio then
+		currentAudio.Playing = not currentAudio.Playing
+		musicPanel.Menu.TogglePlaying.ImageRectOffset = currentAudio.Playing and Vector2.new(804, 124) or Vector2.new(764, 244)
+	end
+end)
+
+musicPanel.Menu.Next.MouseButton1Click:Connect(function()
+	if currentAudio then
+		if #musicQueue == 0 then currentAudio.Playing = false currentAudio.SoundId = "" return end
+
+		if musicPanel.Queue.List:FindFirstChild(tostring(musicQueue[1].instanceName)) then
+			musicPanel.Queue.List:FindFirstChild(tostring(musicQueue[1].instanceName)):Destroy()
+		end
+
+		musicPanel.Menu.TogglePlaying.ImageRectOffset = currentAudio.Playing and Vector2.new(804, 124) or Vector2.new(764, 244)
+
+		table.remove(musicQueue, 1)
+
+		playNext()
+	end
+end)
+
+characterPanel.Interactions.Rejoin.Interact.MouseButton1Click:Connect(rejoin)
+characterPanel.Interactions.Serverhop.Interact.MouseButton1Click:Connect(serverhop)
+
+homeContainer.Interactions.Server.JobId.Interact.MouseButton1Click:Connect(function()
+	if setclipboard then 
+		originalSetClipboard([[
+-- This script will teleport you to ' ]]..game:GetService("MarketplaceService"):GetProductInfo(placeId).Name..[['
+-- If it doesn't work after a few seconds, try going into the same game, and then run the script to join ]]..localPlayer.DisplayName.. [['s specific server
+
+game:GetService("TeleportService"):TeleportToPlaceInstance(']]..placeId..[[', ']]..jobId..[[')]]
+		)
+		queueNotification("Copied Join Script","Successfully set clipboard to join script, players can use this script to join your specific server.", 4335479121)
+	else
+		queueNotification("Unable to copy join script","Missing setclipboard() function, can't set data to your clipboard.", 4335479658)
+	end
+end)
+
+homeContainer.Interactions.Discord.Interact.MouseButton1Click:Connect(function()
+	if setclipboard then 
+		originalSetClipboard("https://sirius.menu/discord")
+		queueNotification("Discord Invite Copied", "We've set your clipboard to the Sirius discord invite.", 4335479121)
+	else
+		queueNotification("Unable to copy Discord invite", "Missing setclipboard() function, can't set data to your clipboard.", 4335479658)
+	end
+end)
+
+for _, button in ipairs(scriptsPanel.Interactions.Selection:GetChildren()) do
+	local origsize = button.Size
+
+	button.MouseEnter:Connect(function()
+		if not debounce then
+			tweenService:Create(button, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {BackgroundTransparency = 0}):Play()
+			tweenService:Create(button, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {Size = UDim2.new(0, button.Size.X.Offset - 5, 0, button.Size.Y.Offset - 3)}):Play()
+			tweenService:Create(button.UIStroke, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {Transparency = 1}):Play()
+			tweenService:Create(button.Title, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 0.1}):Play()
+		end
+	end)
+
+	button.MouseLeave:Connect(function()
+		if not debounce then
+			tweenService:Create(button, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {BackgroundTransparency = 0}):Play()
+			tweenService:Create(button, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {Size = origsize}):Play()
+			tweenService:Create(button.UIStroke, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {Transparency = 0}):Play()
+			tweenService:Create(button.Title, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 0}):Play()
+		end
+	end)
+
+	button.Interact.MouseButton1Click:Connect(function()
+		tweenService:Create(button, TweenInfo.new(.4,Enum.EasingStyle.Quint),  {Size = UDim2.new(0, origsize.X.Offset - 9, 0, origsize.Y.Offset - 6)}):Play()
+		task.wait(0.1)
+		tweenService:Create(button, TweenInfo.new(.25,Enum.EasingStyle.Quint),  {Size = origsize}):Play()
+
+		if button.Name == "Library" then
+			if not scriptSearch.Visible and not debounce then openScriptSearch() end
+		end
+		-- run action
+	end)
+end
+
+smartBar.Buttons.Music.Interact.MouseButton1Click:Connect(function()
+	if debounce then return end
+	if musicPanel.Visible then closeMusic() else openMusic() end
+end)
+
+smartBar.Buttons.Home.Interact.MouseButton1Click:Connect(function()
+	if debounce then return end
+	if homeContainer.Visible then closeHome() else openHome() end
+end)
+
+smartBar.Buttons.Settings.Interact.MouseButton1Click:Connect(function()
+	if debounce then return end
+	if settingsPanel.Visible then closeSettings() else openSettings() end
+end)
+
+for _, button in ipairs(smartBar.Buttons:GetChildren()) do
+	if UI:FindFirstChild(button.Name) and button:FindFirstChild("Interact") then
+		button.Interact.MouseButton1Click:Connect(function()
+			if isPanel(button.Name) then
+				if not debounce and UI:FindFirstChild(button.Name).Visible then
+					task.spawn(closePanel, button.Name)
+				else
+					task.spawn(openPanel, button.Name)
+				end
+			end
+
+			tweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {Size = UDim2.new(0,28,0,28)}):Play()
+			tweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.6}):Play()
+			tweenService:Create(button.Icon, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {ImageTransparency = 0.6}):Play()
+			task.wait(0.15)
+			tweenService:Create(button, TweenInfo.new(0.25, Enum.EasingStyle.Quint), {Size = UDim2.new(0,36,0,36)}):Play()
+			tweenService:Create(button, TweenInfo.new(0.25, Enum.EasingStyle.Quint), {BackgroundTransparency = 0}):Play()
+			tweenService:Create(button.Icon, TweenInfo.new(0.25, Enum.EasingStyle.Quint), {ImageTransparency = 0.02}):Play()
+		end)
+
+		button.MouseEnter:Connect(function()
+			tweenService:Create(button.UIGradient, TweenInfo.new(1.4, Enum.EasingStyle.Quint), {Rotation = 360}):Play()
+			tweenService:Create(button.UIStroke.UIGradient, TweenInfo.new(1.4, Enum.EasingStyle.Quint), {Rotation = 360}):Play()
+			tweenService:Create(button.UIStroke, TweenInfo.new(0.8, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+			tweenService:Create(button.Icon, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {ImageTransparency = 0}):Play()
+			tweenService:Create(button.UIGradient, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {Offset = Vector2.new(0,-0.5)}):Play()
+		end)
+
+		button.MouseLeave:Connect(function()
+			tweenService:Create(button.UIStroke.UIGradient, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {Rotation = 50}):Play()
+			tweenService:Create(button.UIGradient, TweenInfo.new(0.9, Enum.EasingStyle.Quint), {Rotation = 50}):Play()
+			tweenService:Create(button.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {Transparency = 0}):Play()
+			tweenService:Create(button.Icon, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {ImageTransparency = 0.05}):Play()
+			tweenService:Create(button.UIGradient, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {Offset = Vector2.new(0,0)}):Play()
+		end)
+	end
+end
+
+userInputService.InputBegan:Connect(function(input, processed)
+	if not checkSirius() then return end
+
+	if checkingForKey then
+		if input.KeyCode ~= Enum.KeyCode.Unknown then
+			local splitMessage = string.split(tostring(input.KeyCode), ".")
+			local newKeyNoEnum = splitMessage[3]
+			checkingForKey.object.InputFrame.InputBox.Text = tostring(newKeyNoEnum)
+			checkingForKey.data.current = tostring(newKeyNoEnum)
+			checkingForKey.object.InputFrame.InputBox:ReleaseFocus()
+			saveSettings()
+		end
+
+		return
+	end
+
+	for _, category in ipairs(siriusSettings) do
+		for _, setting in ipairs(category.categorySettings) do
+			if setting.settingType == "Key" then
+				if setting.current ~= nil and setting.current ~= "" then
+					if input.KeyCode == Enum.KeyCode[setting.current] and not processed then
+						if setting.callback then
+							task.spawn(setting.callback)
+
+							local action = checkAction(setting.name) or nil
+							if action then
+								local object = action.object
+								action = action.action
+
+								if action.enabled then
+									object.Icon.Image = "rbxassetid://"..action.images[1]
+									tweenService:Create(object, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.1}):Play()
+									tweenService:Create(object.UIStroke, TweenInfo.new(0.6, Enum.EasingStyle.Quint), {Transparency = 1}):Play()
+									tweenService:Create(object.Icon, TweenInfo.new(0.45, Enum.EasingStyle.Quint), {ImageTransparency = 0.1}):Play()
+
+									if action.disableAfter then
+										task.delay(action.disableAfter, function()
+											action.enabled = false
+											object.Icon.Image = "rbxassetid://"..action.images[2]
+											tweenService:Create(object, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.55}):Play()
+											tweenService:Create(object.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
+											tweenService:Create(object.Icon, TweenInfo.new(0.25, Enum.EasingStyle.Quint), {ImageTransparency = 0.5}):Play()
+										end)
+									end
+
+									if action.rotateWhileEnabled then
+										repeat
+											object.Icon.Rotation = 0
+											tweenService:Create(object.Icon, TweenInfo.new(0.75, Enum.EasingStyle.Quint), {Rotation = 360}):Play()
+											task.wait(1)
+										until not action.enabled
+										object.Icon.Rotation = 0
+									end
+								else
+									object.Icon.Image = "rbxassetid://"..action.images[2]
+									tweenService:Create(object, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.55}):Play()
+									tweenService:Create(object.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0.4}):Play()
+									tweenService:Create(object.Icon, TweenInfo.new(0.25, Enum.EasingStyle.Quint), {ImageTransparency = 0.5}):Play()
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
+	if input.KeyCode == Enum.KeyCode[checkSetting("Open ScriptSearch").current] and not processed and not debounce then
+		if scriptSearch.Visible then
+			closeScriptSearch()
+		else
+			openScriptSearch()
+		end
+	end
+
+	if input.KeyCode == Enum.KeyCode[checkSetting("Toggle smartBar").current] and not processed and not debounce then
+		if smartBarOpen then 
+			closeSmartBar()
+		else
+			openSmartBar()
+		end
+	end
+end)
+
+userInputService.InputEnded:Connect(function(input, processed)
+	if not checkSirius() then return end
+
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		for _, slider in pairs(siriusValues.sliders) do
+			slider.active = false
+
+			if characterPanel.Visible and not debounce and slider.object and checkSirius() then
+				tweenService:Create(slider.object, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.8}):Play()
+				tweenService:Create(slider.object.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0.5}):Play()
+				tweenService:Create(slider.object.Information, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {TextTransparency = 0.3}):Play()
+			end
+		end
+	end
+end)
+
+camera:GetPropertyChangedSignal('ViewportSize'):Connect(function()
+	task.wait(.5)
+	updateSliderPadding()
+end)
+
+scriptSearch.SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+	if #scriptSearch.SearchBox.Text > 0 then
+		tweenService:Create(scriptSearch.Icon, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+		tweenService:Create(scriptSearch.SearchBox, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+	else
+		tweenService:Create(scriptSearch.Icon, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {ImageColor3 = Color3.fromRGB(150, 150, 150)}):Play()
+		tweenService:Create(scriptSearch.SearchBox, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextColor3 = Color3.fromRGB(150, 150, 150)}):Play()
+	end
+end)
+
+scriptSearch.SearchBox.FocusLost:Connect(function(enterPressed)
+	tweenService:Create(scriptSearch.Icon, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {ImageColor3 = Color3.fromRGB(150, 150, 150)}):Play()
+	tweenService:Create(scriptSearch.SearchBox, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextColor3 = Color3.fromRGB(150, 150, 150)}):Play()
+
+	if #scriptSearch.SearchBox.Text > 0 then
+		if enterPressed then
+			local success, response = pcall(function()
+				searchScriptBlox(scriptSearch.SearchBox.Text)
+			end)
+		end
+	else
+		closeScriptSearch()
+	end
+end)
+
+scriptSearch.SearchBox.Focused:Connect(function()
+	if #scriptSearch.SearchBox.Text > 0 then
+		tweenService:Create(scriptSearch.Icon, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+		tweenService:Create(scriptSearch.SearchBox, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+	end
+end)
+
+mouse.Move:Connect(function()
+	for _, slider in pairs(siriusValues.sliders) do
+		if slider.active then
+			updateSlider(slider)
+		end
+	end
+end)
+
+userInputService.WindowFocusReleased:Connect(function() windowFocusChanged(false) end)
+userInputService.WindowFocused:Connect(function() windowFocusChanged(true) end)
+
+for index, player in ipairs(players:GetPlayers()) do
+	createPlayer(player)
+	createEsp(player)
+	player.Chatted:Connect(function(message) onChatted(player, message) end)
+end
+
+players.PlayerAdded:Connect(function(player)
+	if not checkSirius() then return end
+
+	createPlayer(player)
+	createEsp(player)
+
+	player.Chatted:Connect(function(message) onChatted(player, message) end)
+
+	if checkSetting("Log PlayerAdded and PlayerRemoving").current then
+		local logData = {
+			["content"] = player.DisplayName.." (@"..player.Name..") left the server.",
+			["avatar_url"] = "https://www.roblox.com/headshot-thumbnail/image?userId="..player.UserId.."&width=420&height=420&format=png",
+			["username"] = player.DisplayName,
+			["allowed_mentions"] = {parse = {}}
+		}
+
+		logData = httpService:JSONEncode(logData)
+
+		pcall(function()
+			local req = originalRequest({
+				Url = checkSetting("Player Added and Removing Webhook URL").current,
+				Method = 'POST',
+				Headers = {
+					['Content-Type'] = 'application/json',
+				},
+				Body = logData
+			})
+		end)
+
+	end
+
+	if checkSetting("Moderator Detection").current and Pro then
+		local roleFound = player:GetRoleInGroup(creatorId)
+
+		if siriusValues.currentCreator == "group" then
+			for _, role in pairs(siriusValues.administratorRoles) do 
+				if string.find(string.lower(roleFound), role) then
+					promptModerator(player, roleFound)
+					queueNotification("Administrator Joined", siriusValues.currentGroup .." "..roleFound.." ".. player.DisplayName .." has joined your session", 3944670656) -- change to group name
+				end
+			end
+		end
+	end
+
+	if checkSetting("Friend Notifications").current then
+		if localPlayer:IsFriendsWith(player.UserId) then
+			queueNotification("Friend Joined", "Your friend "..player.DisplayName.." has joined your server.", 4370335364)
+		end
+	end
+end)
+
+players.PlayerRemoving:Connect(function(player)
+	if checkSetting("Log PlayerAdded and PlayerRemoving").current then
+		local logData = {
+			["content"] = player.DisplayName.." (@"..player.Name..") joined the server.",
+			["avatar_url"] = "https://www.roblox.com/headshot-thumbnail/image?userId="..player.UserId.."&width=420&height=420&format=png",
+			["username"] = player.DisplayName,
+			["allowed_mentions"] = {parse = {}}
+		}
+
+		logData = httpService:JSONEncode(logData)
+
+		pcall(function()
+			local req = originalRequest({
+				Url = checkSetting("Player Added and Removing Webhook URL").current,
+				Method = 'POST',
+				Headers = {
+					['Content-Type'] = 'application/json',
+				},
+				Body = logData
+			})
+		end)
+	end
+
+	removePlayer(player)
+
+	local highlight = espContainer:FindFirstChild(player.Name)
+	if highlight then
+		highlight:Destroy()
+	end
+end)
+
+runService.RenderStepped:Connect(function(frame)
+	if not checkSirius() then return end
+	local fps = math.round(1/frame)
+
+	table.insert(siriusValues.frameProfile.fpsQueue, fps)
+	siriusValues.frameProfile.totalFPS += fps
+
+	if #siriusValues.frameProfile.fpsQueue > siriusValues.frameProfile.fpsQueueSize then
+		siriusValues.frameProfile.totalFPS -= siriusValues.frameProfile.fpsQueue[1]
+		table.remove(siriusValues.frameProfile.fpsQueue, 1)
+	end
+end)
+
+runService.Stepped:Connect(function()
+	if not checkSirius() then return end
+
+	local character = localPlayer.Character
+	if character then
+		-- No Clip
+		local noclipEnabled = siriusValues.actions[1].enabled
+		local flingEnabled = siriusValues.actions[6].enabled
+
+		for _, part in ipairs(character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				if noclipDefaults[part] == nil then
+					task.wait()
+					noclipDefaults[part] = part.CanCollide
+				else
+					if noclipEnabled or flingEnabled then
+						part.CanCollide = false
+					else
+						part.CanCollide = noclipDefaults[part]
+					end
+				end
+			end
+		end
+	end
+end)
+
+runService.Heartbeat:Connect(function()
+	if not checkSirius() then return end
+
+	local character = localPlayer.Character
+	local primaryPart = character and character.PrimaryPart
+	if primaryPart then
+		local bodyVelocity, bodyGyro = unpack(movers)
+		if not bodyVelocity then
+			bodyVelocity = Instance.new("BodyVelocity")
+			bodyVelocity.MaxForce = Vector3.one * 9e9
+
+			bodyGyro = Instance.new("BodyGyro")
+			bodyGyro.MaxTorque = Vector3.one * 9e9
+			bodyGyro.P = 9e4
+
+			local bodyAngularVelocity = Instance.new("BodyAngularVelocity")
+			bodyAngularVelocity.AngularVelocity = Vector3.yAxis * 9e9
+			bodyAngularVelocity.MaxTorque = Vector3.yAxis * 9e9
+			bodyAngularVelocity.P = 9e9
+
+			movers = { bodyVelocity, bodyGyro, bodyAngularVelocity }
+		end
+
+		-- Fly
+		if siriusValues.actions[2].enabled then
+			local camCFrame = camera.CFrame
+			local velocity = Vector3.zero
+			local rotation = camCFrame.Rotation
+
+			if userInputService:IsKeyDown(Enum.KeyCode.W) then
+				velocity += camCFrame.LookVector
+				rotation *= CFrame.Angles(math.rad(-40), 0, 0)
+			end
+			if userInputService:IsKeyDown(Enum.KeyCode.S) then
+				velocity -= camCFrame.LookVector
+				rotation *= CFrame.Angles(math.rad(40), 0, 0)
+			end
+			if userInputService:IsKeyDown(Enum.KeyCode.D) then
+				velocity += camCFrame.RightVector
+				rotation *= CFrame.Angles(0, 0, math.rad(-40))
+			end
+			if userInputService:IsKeyDown(Enum.KeyCode.A) then
+				velocity -= camCFrame.RightVector
+				rotation *= CFrame.Angles(0, 0, math.rad(40))
+			end
+			if userInputService:IsKeyDown(Enum.KeyCode.Space) then
+				velocity += Vector3.yAxis
+			end
+			if userInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+				velocity -= Vector3.yAxis
+			end
+
+			local tweenInfo = TweenInfo.new(0.5)
+			tweenService:Create(bodyVelocity, tweenInfo, { Velocity = velocity * siriusValues.sliders[3].value * 45 }):Play()
+			bodyVelocity.Parent = primaryPart
+
+			if not siriusValues.actions[6].enabled then
+				tweenService:Create(bodyGyro, tweenInfo, { CFrame = rotation }):Play()
+				bodyGyro.Parent = primaryPart
+			end
+		else
+			bodyVelocity.Parent = nil
+			bodyGyro.Parent = nil
+		end
+	end
+end)
+
+runService.Heartbeat:Connect(function(frame)
+	if not checkSirius() then return end
+	if Pro then
+		if checkSetting("Spatial Shield").current and tonumber(checkSetting("Spatial Shield Threshold").current) then
+			for index, sound in next, soundInstances do
+				if not sound then
+					table.remove(soundInstances, index)
+				elseif gameSettings.MasterVolume * sound.PlaybackLoudness * sound.Volume >= tonumber(checkSetting("Spatial Shield Threshold").current) then
+					if sound.Volume > 0.55 then 
+						suppressedSounds[sound.SoundId] = "S"
+						sound.Volume = 0.5 	
+					elseif sound.Volume > 0.2 and sound.Volume < 0.55 then
+						suppressedSounds[sound.SoundId] = "S2"
+						sound.Volume = 0.1
+					elseif sound.Volume < 0.2 then
+						suppressedSounds[sound.SoundId] = "Mute"
+						sound.Volume = 0
+					end
+					if soundSuppressionNotificationCooldown == 0 then
+						queueNotification("Spatial Shield","A high-volume audio is being played ("..sound.Name..") and it has been suppressed.", 4483362458) 
+						soundSuppressionNotificationCooldown = 15
+					end
+					table.remove(soundInstances, index)
+				end
+			end
+		end
+	end
+
+	if checkSetting("Anonymous Client").current then
+		for _, text in ipairs(cachedText) do
+			local lowerText = string.lower(text.Text)
+			if string.find(lowerText, lowerName, 1, true) or string.find(lowerText, lowerDisplayName, 1, true) then
+
+				storeOriginalText(text)
+
+				local newText = string.gsub(string.gsub(lowerText, lowerName, randomUsername), lowerDisplayName, randomUsername)
+				text.Text = string.gsub(newText, "^%l", string.upper)
+			end
+		end
+	else
+		undoAnonymousChanges()
+	end
+end)
+
+for _, instance in next, game:GetDescendants() do
+	if instance:IsA("Sound") then
+		if suppressedSounds[instance.SoundId] then
+			if suppressedSounds[instance.SoundId] == "S" then
+				instance.Volume = 0.5
+			elseif suppressedSounds[instance.SoundId] == "S2" then
+				instance.Volume = 0.1
+			else
+				instance.Volume = 0
+			end
+		else
+			if not table.find(cachedIds, instance.SoundId) then
+				table.insert(soundInstances, instance)
+				table.insert(cachedIds, instance.SoundId)
+			end
+		end
+	elseif instance:IsA("TextLabel") or instance:IsA("TextButton") then
+		if not table.find(cachedText, instance) then
+			table.insert(cachedText, instance)
+		end
+	end
+end
+
+game.DescendantAdded:Connect(function(instance)
+	if checkSirius() then
+		if instance:IsA("Sound") then
+			if suppressedSounds[instance.SoundId] then
+				if suppressedSounds[instance.SoundId] == "S" then
+					instance.Volume = 0.5
+				elseif suppressedSounds[instance.SoundId] == "S2" then
+					instance.Volume = 0.1
+				else
+					instance.Volume = 0
+				end
+			else
+				if not table.find(cachedIds, instance.SoundId) then
+					table.insert(soundInstances, instance)
+					table.insert(cachedIds, instance.SoundId)
+				end
+			end
+		elseif instance:IsA("TextLabel") or instance:IsA("TextButton") then
+			if not table.find(cachedText, instance) then
+				table.insert(cachedText, instance)
+			end
+		end
+	end
+end)
+
+
+while task.wait(1) do
+	if not checkSirius() then
+		if espContainer then espContainer:Destroy() end
+		undoAnonymousChanges()
+		break
+	end
+
+	smartBar.Time.Text = os.date("%H")..":"..os.date("%M")
+	task.spawn(UpdateHome)
+
+	if getconnections then
+		for _, connection in getconnections(localPlayer.Idled) do
+			if not checkSetting("Anti Idle").current then connection:Enable() else connection:Disable() end
+		end
+	end
+
+	toggle.Visible = not checkSetting("Hide Toggle Button").current
+
+	-- Disconnected Check
+	local disconnectedRobloxUI = coreGui.RobloxPromptGui.promptOverlay:FindFirstChild("ErrorPrompt")
+
+	if disconnectedRobloxUI and not promptedDisconnected then
+		local reasonPrompt = disconnectedRobloxUI.MessageArea.ErrorFrame.ErrorMessage.Text
+
+		promptedDisconnected = true
+		disconnectedPrompt.Parent = coreGui.RobloxPromptGui
+
+		local disconnectType
+		local foundString
+
+		for _, preDisconnectType in ipairs(siriusValues.disconnectTypes) do
+			for _, typeString in pairs(preDisconnectType[2]) do
+				if string.find(reasonPrompt, typeString) then
+					disconnectType = preDisconnectType[1]
+					foundString = true
+					break
+				end
+			end
+		end
+
+		if not foundString then disconnectType = "kick" end
+
+		wipeTransparency(disconnectedPrompt, 1, true)
+		disconnectedPrompt.Visible = true
+
+		if disconnectType == "ban" then
+			disconnectedPrompt.Content.Text = "You've been banned, would you like to leave this server?"
+			disconnectedPrompt.Action.Text = "Leave"
+			disconnectedPrompt.Action.Size = UDim2.new(0, 77, 0, 36) -- use textbounds
+
+			disconnectedPrompt.UIGradient.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.new(0,0,0)),
+				ColorSequenceKeypoint.new(1, Color3.new(0.819608, 0.164706, 0.164706))
+			})
+		elseif disconnectType == "kick" then
+			disconnectedPrompt.Content.Text = "You've been kicked, would you like to serverhop?"
+			disconnectedPrompt.Action.Text = "Serverhop"
+			disconnectedPrompt.Action.Size = UDim2.new(0, 114, 0, 36)
+
+			disconnectedPrompt.UIGradient.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.new(0,0,0)),
+				ColorSequenceKeypoint.new(1, Color3.new(0.0862745, 0.596078, 0.835294))
+			})
+		elseif disconnectType == "network" then
+			disconnectedPrompt.Content.Text = "You've lost connection, would you like to rejoin?"
+			disconnectedPrompt.Action.Text = "Rejoin"
+			disconnectedPrompt.Action.Size = UDim2.new(0, 82, 0, 36)
+
+			disconnectedPrompt.UIGradient.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.new(0,0,0)),
+				ColorSequenceKeypoint.new(1, Color3.new(0.862745, 0.501961, 0.0862745))
+			})
+		end
+
+		tweenService:Create(disconnectedPrompt, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {BackgroundTransparency = 0}):Play()
+		tweenService:Create(disconnectedPrompt.Title, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 0}):Play()
+		tweenService:Create(disconnectedPrompt.Content, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 0.3}):Play()
+		tweenService:Create(disconnectedPrompt.Action, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {BackgroundTransparency = 0.7}):Play()
+		tweenService:Create(disconnectedPrompt.Action, TweenInfo.new(.5,Enum.EasingStyle.Quint),  {TextTransparency = 0}):Play()
+
+		disconnectedPrompt.Action.MouseButton1Click:Connect(function()
+			if disconnectType == "ban" then
+				game:Shutdown() -- leave
+			elseif disconnectType == "kick" then
+				serverhop()
+			elseif disconnectType == "network" then
+				rejoin()
+			end
+		end)
+	end
+
+	if Pro then
+		-- all Pro checks here!
+
+		-- Two-Way Adaptive Latency Checks
+		if checkHighPing() then
+			if siriusValues.pingProfile.pingNotificationCooldown <= 0 then
+				if checkSetting("Adaptive Latency Warning").current then
+					queueNotification("High Latency Warning","We've noticed your latency has reached a higher value than usual, you may find that you are lagging or your actions are delayed in-game. Consider checking for any background downloads on your machine.", 4370305588)
+					siriusValues.pingProfile.pingNotificationCooldown = 120
+				end
+			end
+		end
+
+		if siriusValues.pingProfile.pingNotificationCooldown > 0 then
+			siriusValues.pingProfile.pingNotificationCooldown -= 1
+		end
+
+		-- Adaptive frame time checks
+		if siriusValues.frameProfile.frameNotificationCooldown <= 0 then
+			if #siriusValues.frameProfile.fpsQueue > 0 then
+				local avgFPS = siriusValues.frameProfile.totalFPS / #siriusValues.frameProfile.fpsQueue
+
+				if avgFPS < siriusValues.frameProfile.lowFPSThreshold then
+					if checkSetting("Adaptive Performance Warning").current then
+						queueNotification("Degraded Performance","We've noticed your client's frames per second have decreased. Consider checking for any background tasks or programs on your machine.", 4384400106)
+						siriusValues.frameProfile.frameNotificationCooldown = 120	
+					end
+				end
+			end
+		end
+
+		if siriusValues.frameProfile.frameNotificationCooldown > 0 then
+			siriusValues.frameProfile.frameNotificationCooldown -= 1
+		end
+	end
+end
