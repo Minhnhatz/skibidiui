@@ -2728,9 +2728,66 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
             -- Tab Home
-            local HomeTab = Window:MakeTab({"Home", "home"})
+local HomeTab = Window:MakeTab({ "Home", "home" })
 
-            -- Labels
+-- Labels
+local fpsLabelFrame, fpsLabel = HomeTab:AddLabel("FPS: ...")
+local timeLabelFrame, timeLabel = HomeTab:AddLabel("Time Plays: 00:00")
+local friendsLabelFrame, friendsLabel = HomeTab:AddLabel("Friends online: ... / offline: ...")
+
+-- FPS update
+local accumulator, frames, fps = 0, 0, 0
+RunService.RenderStepped:Connect(function(dt)
+    frames += 1
+    accumulator += dt
+    if accumulator >= 0.5 then
+        fps = math.floor(frames / accumulator + 0.5)
+        frames, accumulator = 0, 0
+        pcall(function() fpsLabel:SetTitle("FPS: " .. tostring(fps)) end)
+    end
+end)
+
+-- Session time update
+local startTime = tick()
+RunService.Heartbeat:Connect(function()
+    local elapsed = math.floor(tick() - startTime)
+    local m = math.floor(elapsed / 60)
+    local s = elapsed % 60
+    pcall(function() timeLabel:SetTitle(string.format("Time Plays: %02d:%02d", m, s)) end)
+end)
+
+-- Friends update
+local function updateFriends()
+    local onlineCount, totalCount = 0, 0
+    local success, friends = pcall(function()
+        if Players and Players.GetFriendsAsync then
+            local t = {}
+            local pages = Players:GetFriendsAsync(LocalPlayer.UserId)
+            for _,v in ipairs(pages:GetCurrentPage()) do
+                table.insert(t, v)
+            end
+            return t
+        end
+    end)
+    if success and friends and #friends > 0 then
+        totalCount = #friends
+        for _,f in ipairs(friends) do
+            if f.IsOnline then onlineCount += 1 end
+        end
+    else
+        totalCount = #Players:GetPlayers()
+        onlineCount = totalCount
+    end
+    pcall(function() friendsLabel:SetTitle(("Friends online: %d / offline: %d"):format(onlineCount, totalCount - onlineCount)) end)
+end
+
+updateFriends()
+task.spawn(function()
+    while true do
+        task.wait(30)
+        updateFriends()
+    end
+end)
             local fpsLabel = HomeTab:AddLabel("FPS: ...")
             local timeLabel = HomeTab:AddLabel("Time Plays: 00:00")
             local friendsLabel = HomeTab:AddLabel("Friends online: ... / offline: ...")
@@ -2792,3 +2849,5 @@ local LocalPlayer = Players.LocalPlayer
         end
     end)
 end)
+
+return redzlib
