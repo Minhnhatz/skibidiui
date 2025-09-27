@@ -2792,5 +2792,3 @@ local LocalPlayer = Players.LocalPlayer
         end
     end)
 end)
-
-return redzlib
